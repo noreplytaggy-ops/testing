@@ -36,46 +36,10 @@ on:
 jobs:
 
   # ============================================================
-  # JOB 1 — Generate location structure and event mapping
-  # ============================================================
-  generate-locations:
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'schedule' ||
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_locations == 'true')
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Generate location structure and event mapping
-        env:
-          COURSE_MAPS_URL: ${{ secrets.COURSE_MAPS_URL }}
-          EVENT_LIMIT: ${{ github.event.inputs.limit || '0' }}
-        run: node scripts/generate-locations.js
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: event-location-map
-          path: ./event-location-map.json
-          retention-days: 1
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: explore-locations
-          path: ./locations
-          retention-days: 1
-
-  # ============================================================
-  # JOB 1.5 — Generate event HTML pages (AFTER locations)
+  # JOB 1 — Generate event HTML pages
   # ============================================================
   generate-html:
     runs-on: ubuntu-latest
-    needs: [generate-locations]
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'push' ||
@@ -88,18 +52,6 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Download event location map
-        uses: actions/download-artifact@v4
-        with:
-          name: event-location-map
-          path: .
-
-      - name: Download location folder structure
-        uses: actions/download-artifact@v4
-        with:
-          name: explore-locations
-          path: ./locations
-
       - name: Generate HTML pages
         env:
           COURSE_MAPS_URL: ${{ secrets.COURSE_MAPS_URL }}
@@ -108,8 +60,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: locations-with-events
-          path: ./locations
+          name: html-pages
+          path: ./explore
           retention-days: 1
 
   # ============================================================
@@ -158,11 +110,47 @@ jobs:
           retention-days: 1
 
   # ============================================================
+  # JOB 3 — Generate location pages + sitemap.xml
+  # ============================================================
+  generate-locations:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_locations == 'true')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Generate location pages and sitemap
+        env:
+          COURSE_MAPS_URL: ${{ secrets.COURSE_MAPS_URL }}
+          EVENT_LIMIT: ${{ github.event.inputs.limit || '0' }}
+        run: node scripts/generate-locations.js
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: location-pages
+          path: ./locations
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geo-cache
+          path: ./geo-cache.json
+          retention-days: 1
+          if-no-files-found: ignore
+
+  # ============================================================
   # JOB 4 — Commit all outputs
   # ============================================================
   commit:
     runs-on: ubuntu-latest
-    needs: [generate-locations, generate-html, generate-images]
+    needs: [generate-html, generate-images, generate-locations]
     if: |
       always() &&
       (needs.generate-html.result == 'success' ||
@@ -172,12 +160,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download locations with events
+      - name: Download HTML pages
         if: needs.generate-html.result == 'success'
         uses: actions/download-artifact@v4
         with:
-          name: locations-with-events
-          path: ./locations
+          name: html-pages
+          path: ./explore
 
       - name: Download feature images
         if: needs.generate-images.result == 'success'
@@ -186,12 +174,28 @@ jobs:
           name: feature-images
           path: ./explore/images
 
+      - name: Download location pages
+        if: needs.generate-locations.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: location-pages
+          path: ./locations
+
+      - name: Download geo cache
+        if: needs.generate-locations.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: geo-cache
+          path: .
+        continue-on-error: true
+
       - name: Commit and push
         run: |
          git config user.name  "github-actions[bot]"
          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-         git add ./locations
+         git add ./explore ./locations
+         [ -f ./geo-cache.json ] && git add ./geo-cache.json || true
 
          if git diff --cached --quiet; then
           echo "Nothing to commit."
