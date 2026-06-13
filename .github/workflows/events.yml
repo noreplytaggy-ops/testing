@@ -1,0 +1,205 @@
+name: Generate Events
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_html:
+        description: 'Generate event HTML pages'
+        required: false
+        default: true
+        type: boolean
+      run_images:
+        description: 'Generate feature images'
+        required: false
+        default: false
+        type: boolean
+      run_locations:
+        description: 'Generate location pages (country/region/city) + sitemap'
+        required: false
+        default: true
+        type: boolean
+      limit:
+        description: 'Max events to process (0 = all)'
+        required: false
+        default: '0'
+        type: string
+      force_regenerate_images:
+        description: 'Force regenerate all images (ignore existing)'
+        required: false
+        default: false
+        type: boolean
+
+
+  schedule:
+    - cron: '0 2 * * 3'  # 02:00 every Wednesday (UTC)
+
+jobs:
+
+  # ============================================================
+  # JOB 1 — Generate location structure and event mapping
+  # ============================================================
+  generate-locations:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_locations == 'true')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Generate location structure and event mapping
+        env:
+          COURSE_MAPS_URL: ${{ secrets.COURSE_MAPS_URL }}
+          EVENT_LIMIT: ${{ github.event.inputs.limit || '0' }}
+        run: node scripts/generate-locations.js
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: event-location-map
+          path: ./event-location-map.json
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: explore-locations
+          path: ./explore
+          retention-days: 1
+
+  # ============================================================
+  # JOB 1.5 — Generate event HTML pages (AFTER locations)
+  # ============================================================
+  generate-html:
+    runs-on: ubuntu-latest
+    needs: [generate-locations]
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_html == 'true')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Download event location map
+        uses: actions/download-artifact@v4
+        with:
+          name: event-location-map
+          path: .
+
+      - name: Download explore folder structure
+        uses: actions/download-artifact@v4
+        with:
+          name: explore-locations
+          path: ./explore
+
+      - name: Generate HTML pages
+        env:
+          COURSE_MAPS_URL: ${{ secrets.COURSE_MAPS_URL }}
+          EVENT_LIMIT: ${{ github.event.inputs.limit || '0' }}
+        run: node scripts/generate-events.js
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: explore-with-events
+          path: ./explore
+          retention-days: 1
+
+  # ============================================================
+  # JOB 2 — Generate feature images
+  # ============================================================
+  generate-images:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'push' && github.event.inputs.force_regenerate_images == 'true') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_images == 'true')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - run: npm install canvas sharp
+
+      - name: Install canvas system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libjpeg-dev \
+            libgif-dev \
+            librsvg2-dev
+
+      - name: Clear existing images (force regenerate)
+        if: github.event.inputs.force_regenerate_images == 'true'
+        run: rm -rf ./explore/images
+
+      - name: Generate feature images
+        env:
+          COURSE_MAPS_URL: ${{ secrets.COURSE_MAPS_URL }}
+          IMAGE_LIMIT: ${{ github.event.inputs.limit || '0' }}
+        run: node scripts/generate-images.js
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: feature-images
+          path: ./explore/images
+          retention-days: 1
+
+  # ============================================================
+  # JOB 4 — Commit all outputs
+  # ============================================================
+  commit:
+    runs-on: ubuntu-latest
+    needs: [generate-locations, generate-html, generate-images]
+    if: |
+      always() &&
+      (needs.generate-html.result == 'success' ||
+       needs.generate-images.result == 'success' ||
+       needs.generate-locations.result == 'success')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download explore with events
+        if: needs.generate-html.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: explore-with-events
+          path: ./explore
+
+      - name: Download feature images
+        if: needs.generate-images.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: feature-images
+          path: ./explore/images
+
+      - name: Commit and push
+        run: |
+         git config user.name  "github-actions[bot]"
+         git config user.email "github-actions[bot]@users.noreply.github.com"
+
+         git add ./explore
+
+         if git diff --cached --quiet; then
+          echo "Nothing to commit."
+         else
+         git commit -m "chore: regenerate site output [skip ci]"
+
+         git pull --rebase origin main
+
+         git push
+         
+         fi
