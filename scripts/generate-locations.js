@@ -1,106 +1,388 @@
-const fs = require('fs');
+/**
+ * generate-locations.js
+ *
+ * Generates a three-tier set of static HTML pages:
+ *   /locations/                                    — world index (all countries)
+ *   /locations/[country-slug]/                     — country page (all regions)
+ *   /locations/[country-slug]/[region-slug]/       — region page (cities + all event cards)
+ *   /locations/[country-slug]/[region-slug]/[city-slug]/  — city page (event cards)
+ *
+ * All URLs use trailing slashes (index.html files in folders) — no .html in URLs.
+ *
+ * Region and city resolved via Nominatim (OpenStreetMap) reverse geocoding.
+ * Results cached in ./geo-cache.json — repeat runs skip the API entirely.
+ * Nominatim policy: max 1 req/s, descriptive User-Agent — both enforced.
+ *
+ * Header, footer, fonts, colours all match the main generate-events.js exactly.
+ * Event cards use the same course preview mini-map (Leaflet + encrypted coords).
+ * Pages with 8+ events get a client-side search filter.
+ * Every region/city page has a Stay22 "book accommodation" CTA.
+ */
+
+'use strict';
+
+const fs    = require('fs');
+const path  = require('path');
 const https = require('https');
-const path = require('path');
 
-const EVENTS_URL = 'https://www.parkrunnertourist.com/events1.json';
-
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+const EVENTS_URL      = 'https://www.parkrunnertourist.com/events1.json';
 const COURSE_MAPS_URL = process.env.COURSE_MAPS_URL;
-if (!COURSE_MAPS_URL) {
-  throw new Error("COURSE_MAPS_URL secret not set");
+if (!COURSE_MAPS_URL) throw new Error('COURSE_MAPS_URL secret not set');
+
+const BASE_EXPLORE_URL   = 'https://www.parkrunnertourist.com/explore';
+const BASE_LOCATIONS_URL = 'https://www.parkrunnertourist.com/locations';
+const SITE_NAME          = 'parkrunner tourist';
+const OUTPUT_DIR         = path.join(__dirname, '../locations');
+const GEO_CACHE_FILE     = path.join(__dirname, '../locations/geo-cache.json');
+const EVENT_LIMIT        = parseInt(process.env.EVENT_LIMIT || '0', 10);
+const SEARCH_THRESHOLD   = 8;
+
+// Exact colours from generate-events.js
+const ACCENT    = '#4caf50';
+const DARK      = '#2e7d32';
+const ACCENT_JR = '#40e0d0';
+const DARK_JR   = '#008080';
+
+// ---------------------------------------------------------------------------
+// Country flag helper — converts ISO 3166-1 alpha-2 code to emoji flag
+// Regional indicator letters: A = U+1F1E6 ... Z = U+1F1FF
+// ---------------------------------------------------------------------------
+function isoToFlag(iso2) {
+  if (!iso2 || iso2.length !== 2) return '';
+  return Array.from(iso2.toUpperCase())
+    .map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65))
+    .join('');
 }
 
-const OUTPUT_DIR = path.join(__dirname, '../explore');
-const MAX_EVENTS = 9999999;
-const MAX_FILES_PER_FOLDER = 999;
-const EVENT_LIMIT = parseInt(process.env.EVENT_LIMIT || '0', 10);
-const BASE_URL = 'https://www.parkrunnertourist.com/explore';
-
-const COUNTRIES = {
-  "0": {"url": null},
-  "3": {"url": "www.parkrun.com.au"},
-  "4": {"url": "www.parkrun.co.at"},
-  "14": {"url": "www.parkrun.ca"},
-  "23": {"url": "www.parkrun.dk"},
-  "30": {"url": "www.parkrun.fi"},
-  "32": {"url": "www.parkrun.com.de"},
-  "42": {"url": "www.parkrun.ie"},
-  "44": {"url": "www.parkrun.it"},
-  "46": {"url": "www.parkrun.jp"},
-  "54": {"url": "www.parkrun.lt"},
-  "57": {"url": "www.parkrun.my"},
-  "64": {"url": "www.parkrun.co.nl"},
-  "65": {"url": "www.parkrun.co.nz"},
-  "67": {"url": "www.parkrun.no"},
-  "74": {"url": "www.parkrun.pl"},
-  "82": {"url": "www.parkrun.sg"},
-  "85": {"url": "www.parkrun.co.za"},
-  "88": {"url": "www.parkrun.se"},
-  "97": {"url": "www.parkrun.org.uk"},
-  "98": {"url": "www.parkrun.us"}
+// ---------------------------------------------------------------------------
+// Country code → display name + parkrun domain + ISO 3166-1 alpha-2
+// ---------------------------------------------------------------------------
+const COUNTRY_META = {
+  '0':  { name: 'Unknown',        url: null,                 iso2: ''   },
+  '3':  { name: 'Australia',      url: 'www.parkrun.com.au', iso2: 'AU' },
+  '4':  { name: 'Austria',        url: 'www.parkrun.co.at',  iso2: 'AT' },
+  '14': { name: 'Canada',         url: 'www.parkrun.ca',     iso2: 'CA' },
+  '23': { name: 'Denmark',        url: 'www.parkrun.dk',     iso2: 'DK' },
+  '30': { name: 'Finland',        url: 'www.parkrun.fi',     iso2: 'FI' },
+  '32': { name: 'Germany',        url: 'www.parkrun.com.de', iso2: 'DE' },
+  '42': { name: 'Ireland',        url: 'www.parkrun.ie',     iso2: 'IE' },
+  '44': { name: 'Italy',          url: 'www.parkrun.it',     iso2: 'IT' },
+  '46': { name: 'Japan',          url: 'www.parkrun.jp',     iso2: 'JP' },
+  '54': { name: 'Lithuania',      url: 'www.parkrun.lt',     iso2: 'LT' },
+  '57': { name: 'Malaysia',       url: 'www.parkrun.my',     iso2: 'MY' },
+  '64': { name: 'Netherlands',    url: 'www.parkrun.co.nl',  iso2: 'NL' },
+  '65': { name: 'New Zealand',    url: 'www.parkrun.co.nz',  iso2: 'NZ' },
+  '67': { name: 'Norway',         url: 'www.parkrun.no',     iso2: 'NO' },
+  '74': { name: 'Poland',         url: 'www.parkrun.pl',     iso2: 'PL' },
+  '82': { name: 'Singapore',      url: 'www.parkrun.sg',     iso2: 'SG' },
+  '85': { name: 'South Africa',   url: 'www.parkrun.co.za',  iso2: 'ZA' },
+  '88': { name: 'Sweden',         url: 'www.parkrun.se',     iso2: 'SE' },
+  '97': { name: 'United Kingdom', url: 'www.parkrun.org.uk', iso2: 'GB' },
+  '98': { name: 'United States',  url: 'www.parkrun.us',     iso2: 'US' },
 };
 
-const COUNTRY_NAMES = {
-  "0":  "unknown",
-  "3":  "australia",
-  "4":  "austria",
-  "14": "canada",
-  "23": "denmark",
-  "30": "finland",
-  "32": "germany",
-  "42": "ireland",
-  "44": "italy",
-  "46": "japan",
-  "54": "lithuania",
-  "57": "malaysia",
-  "64": "netherlands",
-  "65": "new-zealand",
-  "67": "norway",
-  "74": "poland",
-  "82": "singapore",
-  "85": "south-africa",
-  "88": "sweden",
-  "97": "united-kingdom",
-  "98": "united-states"
+// ---------------------------------------------------------------------------
+// Address field priority per country code.
+// These map to the normalised fields produced by reverseGeocode() above.
+// ---------------------------------------------------------------------------
+const ADDRESS_FIELDS = {
+  // UK — county (admin level 6) as region, city/town as city
+  '97': { regionFields: ['county', 'state_district', 'state'],       cityFields: ['city', 'town', 'village', 'suburb'] },
+  // Australia — state as region, suburb/city as city
+  '3':  { regionFields: ['state'],                                    cityFields: ['city', 'suburb', 'town', 'village'] },
+  // USA — state as region
+  '98': { regionFields: ['state'],                                    cityFields: ['city', 'town', 'village', 'county'] },
+  // Canada
+  '14': { regionFields: ['state', 'province'],                        cityFields: ['city', 'town', 'village'] },
+  // Germany
+  '32': { regionFields: ['state'],                                    cityFields: ['city', 'town', 'village', 'suburb'] },
+  // Ireland
+  '42': { regionFields: ['county', 'state'],                          cityFields: ['city', 'town', 'village', 'suburb'] },
+  // New Zealand
+  '65': { regionFields: ['state', 'region'],                          cityFields: ['city', 'town', 'suburb', 'village'] },
+  // South Africa
+  '85': { regionFields: ['state', 'province'],                        cityFields: ['city', 'town', 'suburb', 'village'] },
+  // Poland
+  '74': { regionFields: ['state'],                                    cityFields: ['city', 'town', 'village'] },
+  // Sweden
+  '88': { regionFields: ['county', 'state'],                          cityFields: ['city', 'town', 'village', 'suburb'] },
+  // Denmark
+  '23': { regionFields: ['state', 'county', 'region'],                cityFields: ['city', 'town', 'village'] },
+  // Finland
+  '30': { regionFields: ['state', 'region'],                          cityFields: ['city', 'town', 'village'] },
+  // Norway
+  '67': { regionFields: ['state', 'county'],                          cityFields: ['city', 'town', 'village'] },
+  // Netherlands
+  '64': { regionFields: ['state', 'province'],                        cityFields: ['city', 'town', 'village', 'suburb'] },
+  // Italy
+  '44': { regionFields: ['state', 'county'],                          cityFields: ['city', 'town', 'village', 'suburb'] },
+  // Austria
+  '4':  { regionFields: ['state'],                                    cityFields: ['city', 'town', 'village', 'suburb'] },
+  // Japan
+  '46': { regionFields: ['state', 'province', 'county'],              cityFields: ['city', 'town', 'village', 'suburb'] },
+  // Lithuania
+  '54': { regionFields: ['state', 'county'],                          cityFields: ['city', 'town', 'village'] },
+  // Malaysia
+  '57': { regionFields: ['state'],                                    cityFields: ['city', 'town', 'suburb', 'village'] },
+  // Singapore — city-state
+  '82': { regionFields: ['country'],                                  cityFields: ['suburb', 'city', 'town'] },
+};
+const DEFAULT_ADDRESS_FIELDS = {
+  regionFields: ['state', 'county', 'state_district', 'region', 'province'],
+  cityFields:   ['city', 'town', 'village', 'suburb', 'municipality'],
 };
 
-function fetchJson(url) {
+function getAddressFields(countryCode) {
+  return ADDRESS_FIELDS[String(countryCode)] || DEFAULT_ADDRESS_FIELDS;
+}
+
+// ---------------------------------------------------------------------------
+// Generic HTTP JSON fetch (used for events JSON, course maps, and geocoding)
+// ---------------------------------------------------------------------------
+function fetchJson(url, headers = {}) {
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    https.get(url, { headers: { Accept: 'application/json', ...headers } }, res => {
       let data = '';
-      res.on('data', chunk => data += chunk);
+      res.on('data', c => data += c);
       res.on('end', () => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`HTTP ${res.statusCode} from ${url}`));
+          return;
+        }
         try { resolve(JSON.parse(data)); }
-        catch (e) { reject(e); }
+        catch (e) { reject(new Error(`JSON parse error for ${url}: ${e.message}`)); }
       });
     }).on('error', reject);
   });
 }
 
-function slugify(name) {
-  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+// ---------------------------------------------------------------------------
+// Reverse geocoding — BigDataCloud (free, no API key, allows fast parallel use)
+// Returns a normalised address object with the same field names we use downstream.
+// Docs: https://www.bigdatacloud.com/free-api/free-reverse-geocode-to-city-api
+// ---------------------------------------------------------------------------
+async function reverseGeocode(lat, lon) {
+  const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
+  try {
+    const data = await fetchJson(url);
+    if (!data || !data.countryCode) return null;
+
+    // Normalise into the same shape our address field logic expects
+    return {
+      city:                  data.city || data.locality || null,
+      town:                  data.locality || null,
+      village:               data.localityInfo && data.localityInfo.administrative
+                               ? (data.localityInfo.administrative.find(a => a.adminLevel === 8) || {}).name || null
+                               : null,
+      suburb:                data.locality || null,
+      county:                data.localityInfo && data.localityInfo.administrative
+                               ? (data.localityInfo.administrative.find(a => a.adminLevel === 6) || {}).name || null
+                               : null,
+      state_district:        data.localityInfo && data.localityInfo.administrative
+                               ? (data.localityInfo.administrative.find(a => a.adminLevel === 5) || {}).name || null
+                               : null,
+      state:                 data.principalSubdivision || null,
+      province:              data.principalSubdivision || null,
+      region:                data.principalSubdivision || null,
+      country:               data.countryName || null,
+      country_code:          data.countryCode || null,
+      // City/locality centre coordinates returned by BDC — much more accurate
+      // than averaging the lat/lon of individual parkrun events in that city.
+      _city_lat:             typeof data.latitude  === 'number' ? data.latitude  : null,
+      _city_lon:             typeof data.longitude === 'number' ? data.longitude : null,
+      // Extra BDC fields for richer UK county resolution
+      _bdc_admin1:           data.principalSubdivision || null,
+      _bdc_admin2:           data.localityInfo && data.localityInfo.administrative
+                               ? (data.localityInfo.administrative.find(a => a.adminLevel === 6) || {}).name || null
+                               : null,
+    };
+  } catch (e) {
+    console.warn(`  Geocode error (${lat},${lon}): ${e.message}`);
+    return null;
+  }
 }
 
-function getParkrunDomain(code) {
-  return COUNTRIES[code]?.url || "www.parkrun.org.uk";
+// UK metropolitan borough → canonical city name.
+// Nominatim at zoom=14 often returns "Salford", "Trafford", "Stockport" etc.
+// as the city for events that are clearly in the Greater Manchester area.
+// We snap these to the well-known city name visitors would search for.
+const UK_METRO_SNAP = {
+  // Greater Manchester
+  'salford': 'Manchester', 'trafford': 'Manchester', 'stockport': 'Manchester',
+  'tameside': 'Manchester', 'oldham': 'Manchester', 'rochdale': 'Manchester',
+  'bury': 'Manchester', 'bolton': 'Manchester', 'wigan': 'Manchester',
+  'leigh': 'Manchester',
+  // West Yorkshire / Leeds
+  'morley': 'Leeds', 'pudsey': 'Leeds', 'otley': 'Leeds', 'horsforth': 'Leeds',
+  'guiseley': 'Leeds', 'garforth': 'Leeds', 'rothwell': 'Leeds',
+  // West Midlands / Birmingham
+  'solihull': 'Birmingham', 'smethwick': 'Birmingham', 'dudley': 'Birmingham',
+  'wolverhampton': 'Birmingham', 'walsall': 'Birmingham', 'west bromwich': 'Birmingham',
+  'sutton coldfield': 'Birmingham',
+  // Greater London — keep boroughs as-is (they are useful), only snap truly ambiguous ones
+  'city of london': 'London',
+  // Merseyside / Liverpool
+  'birkenhead': 'Liverpool', 'wallasey': 'Liverpool', 'knowsley': 'Liverpool',
+  'st helens': 'Liverpool', 'halton': 'Liverpool',
+  // South Yorkshire / Sheffield
+  'rotherham': 'Sheffield', 'barnsley': 'Sheffield',
+  // Tyne and Wear
+  'gateshead': 'Newcastle', 'sunderland': 'Newcastle', 'north shields': 'Newcastle',
+  'south shields': 'Newcastle', 'wallsend': 'Newcastle',
+  // Bristol area
+  'south gloucestershire': 'Bristol', 'bath': 'Bath',
+};
+
+function snapCity(city, countryCode) {
+  if (!city) return city;
+  if (String(countryCode) !== '97') return city;
+  const lower = city.toLowerCase();
+  return UK_METRO_SNAP[lower] || city;
 }
 
-function getSubfolder(slug) {
-  const firstChar = slug.charAt(0).toLowerCase();
-  if (firstChar >= 'a' && firstChar <= 'z') return firstChar.toUpperCase();
-  return '0-9';
+function extractFromAddress(address, countryCode) {
+  if (!address) return { city: null, region: null, cityLat: null, cityLon: null };
+  const { regionFields, cityFields } = getAddressFields(countryCode);
+  const region = regionFields.reduce((f, k) => f || address[k] || null, null);
+  let city     = cityFields.reduce((f, k) => f || address[k] || null, null);
+  city = snapCity(city, countryCode);
+  return {
+    city:    city    || null,
+    region:  region  || null,
+    cityLat: address._city_lat || null,
+    cityLon: address._city_lon || null,
+  };
 }
 
-function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+// ---------------------------------------------------------------------------
+// Geo cache — keyed by lat/lon rounded to 4 decimal places (~11 m grid)
+// ---------------------------------------------------------------------------
+function cacheKey(lat, lon) {
+  return `${Math.round(lat * 1e4) / 1e4},${Math.round(lon * 1e4) / 1e4}`;
 }
 
-// ============================================================
-// COORDINATE ENCRYPTION
-// ============================================================
+function loadCache() {
+  try {
+    if (fs.existsSync(GEO_CACHE_FILE)) {
+      const raw = JSON.parse(fs.readFileSync(GEO_CACHE_FILE, 'utf-8'));
+      // Auto-repair: remove legacy empty-object entries and CACHE_FAILED markers
+      // so they get freshly resolved on this run.
+      let purged = 0;
+      for (const k of Object.keys(raw)) {
+        const v = raw[k];
+        if (!v || v === '__failed__' || (typeof v === 'object' && Object.keys(v).length === 0)) {
+          delete raw[k];
+          purged++;
+        }
+      }
+      if (purged > 0) {
+        console.log(`Geo cache: purged ${purged} stale entries (will be re-resolved).`);
+        saveCache(raw);
+      }
+      return raw;
+    }
+  } catch (e) { console.warn('Could not load geo cache, starting fresh:', e.message); }
+  return {};
+}
+
+function saveCache(cache) {
+  try { fs.writeFileSync(GEO_CACHE_FILE, JSON.stringify(cache, null, 2), 'utf-8'); }
+  catch (e) { console.warn('Could not save geo cache:', e.message); }
+}
+
+// Failed lookups are stored as the string '__failed__' so they are retried
+// on the next run (unlike {} which is truthy and would prevent retries).
+const CACHE_FAILED = '__failed__';
+
+function cacheHit(cache, k) {
+  if (!Object.prototype.hasOwnProperty.call(cache, k)) return false;
+  const v = cache[k];
+  // Treat empty objects {} (legacy failure marker) and CACHE_FAILED string as misses
+  if (!v || v === CACHE_FAILED) return false;
+  if (typeof v === 'object' && Object.keys(v).length === 0) return false;
+  return true;
+}
+
+function cacheAddress(cache, k) {
+  const v = cache[k];
+  if (!v || v === CACHE_FAILED) return null;
+  if (typeof v === 'object' && Object.keys(v).length === 0) return null;
+  return v;
+}
+
+async function geocodeAllEvents(events, cache) {
+  const seen = new Set();
+  const missing = [];
+  for (const ev of events) {
+    if (ev.lat === 0 && ev.lon === 0) continue;
+    const k = cacheKey(ev.lat, ev.lon);
+    if (cacheHit(cache, k) && !seen.has(k)) continue;
+    if (!seen.has(k)) { seen.add(k); missing.push({ lat: ev.lat, lon: ev.lon, k }); }
+  }
+  if (!missing.length) { console.log('Geo cache: all coordinates resolved, skipping geocoding.'); return; }
+
+  // BigDataCloud allows fast concurrent use — 10 in parallel, 100ms between batches.
+  // 408 coordinates = ~5 seconds instead of ~7 minutes with Nominatim.
+  const BATCH_SIZE  = 10;
+  const BATCH_DELAY = 100;
+
+  const secs = Math.ceil((missing.length / BATCH_SIZE) * BATCH_DELAY / 1000);
+  console.log(`Geo cache: ${missing.length} coordinates to resolve (~${secs}s in batches of ${BATCH_SIZE})...`);
+
+  for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+    const batch = missing.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map(async ({ lat, lon, k }) => {
+      const result = await reverseGeocode(lat, lon);
+      cache[k] = result || CACHE_FAILED;
+    }));
+
+    const done = Math.min(i + BATCH_SIZE, missing.length);
+    if (done % 100 === 0 || done === missing.length) {
+      console.log(`  Geocoded ${done}/${missing.length}...`);
+      saveCache(cache);
+    }
+
+    if (i + BATCH_SIZE < missing.length) await sleep(BATCH_DELAY);
+  }
+
+  saveCache(cache);
+  console.log('Geo cache: saved.');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+function slugify(str) {
+  return (str || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-').replace(/^-|-$/g, '');
+}
+
+function ensure(dir) { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); }
+
+function centroid(events) {
+  if (!events.length) return { lat: 51.5, lon: -0.1 };
+  return {
+    lat: events.reduce((s, e) => s + e.lat, 0) / events.length,
+    lon: events.reduce((s, e) => s + e.lon, 0) / events.length,
+  };
+}
+
+function getExploreSubfolder(slug) {
+  const c = slug.charAt(0).toLowerCase();
+  return (c >= 'a' && c <= 'z') ? c.toUpperCase() : '0-9';
+}
+
+// ---------------------------------------------------------------------------
+// Coordinate encryption — identical to generate-events.js
+// ---------------------------------------------------------------------------
 function eventSeed(name) {
   let h = 0x12345678;
   for (let i = 0; i < name.length; i++) {
@@ -122,140 +404,75 @@ function encryptCoords(coords, seed) {
   return Buffer.from(JSON.stringify(flat)).toString('base64');
 }
 
+// Inlined decrypt function — same as in generate-events.js
 function decryptFnJs() {
   return `function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}`;
 }
 
-// ============================================================
-// SITEMAP HELPERS
-// ============================================================
-function locationSlug(eventLocation) {
-  if (!eventLocation || !eventLocation.trim()) return 'unknown';
-  const primary = eventLocation.split(',')[0].trim();
-  return slugify(primary) || slugify(eventLocation) || 'unknown';
-}
+// ---------------------------------------------------------------------------
+// Shared page structure — identical to generate-events.js
+// ---------------------------------------------------------------------------
 
-function buildLocationPath(event) {
-  const countryCode = String(event.properties.countrycode);
-  const country = COUNTRY_NAMES[countryCode] || 'unknown';
-  const loc = locationSlug(event.properties.EventLocation || '');
-  return `https://www.parkrunnertourist.com/locations/${country}/${loc}/`;
-}
+// Exact <head> block matching the original site
+function htmlHead({ title, description, canonicalUrl, lat, lon, locationName, breadcrumbItems = [] }) {
+  const plainTitle = title.replace(/&amp;/g, '&');
+  const plainDesc  = description.replace(/&amp;/g, '&');
 
-// ============================================================
-// GENERATE HTML
-// ============================================================
-async function generateHtml(event, relativePath, allEventsInfo, slugToSubfolder, courseMaps = {}) {
-  const name = event.properties.eventname || 'Unknown event';
-  const longName = event.properties.EventLongName || name;
-  const isCurrentJunior = longName.toLowerCase().includes('junior');
-  const location = event.properties.EventLocation || '';
-  const coords = event.geometry.coordinates || [];
-  const latitude = coords[1] || 0;
-  const longitude = coords[0] || 0;
-  const encodedName = encodeURIComponent(`${longName}`);
-  const countryCode = event.properties.countrycode;
-  const parkrunDomain = getParkrunDomain(countryCode);
-  const eventSlug = slugify(name);
+  // BreadcrumbList schema — always include site root + any passed items
+  const allCrumbs = [
+    { name: 'parkrunner tourist', url: 'https://www.parkrunnertourist.com' },
+    { name: 'Locations',          url: `${BASE_LOCATIONS_URL}/` },
+    ...breadcrumbItems,
+  ];
+  const breadcrumbSchema = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: allCrumbs.map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: c.name,
+      item: c.url,
+    })),
+  });
 
-  let description = event.properties.EventDescription || '';
-  const hasDescription = description && description.trim() !== '' && description.trim() !== 'No description available.';
-  if (hasDescription) {
-    description = `<p>${description.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`;
-  }
-
-  const currentSlug = slugify(name);
-  const nearby = allEventsInfo
-    .filter(e => {
-      const eIsJunior = e.longName.toLowerCase().includes('junior');
-      return e.slug !== currentSlug && e.country === countryCode && eIsJunior === isCurrentJunior;
-    })
-    .map(e => ({ ...e, dist: calculateDistance(latitude, longitude, e.lat, e.lon) }))
-    .sort((a, b) => a.dist - b.dist)
-    .slice(0, 4);
-
-  const nearbyHtml = nearby.length > 0 ? `
-<div id="nearby-section" class="iframe-container">
-  <h2 class="section-title">Nearby ${isCurrentJunior ? 'Junior Events' : 'Events'}</h2>
-  <ul class="nearby-list">
-    ${nearby.map(n => `<li class="nearby-item"><a href="${BASE_URL}/${slugToSubfolder[n.slug] || getSubfolder(n.slug)}/${n.slug}" target="_blank">${n.longName}</a> <span class="distance">(${n.dist.toFixed(1)} km)</span></li>`).join('')}
-  </ul>
-</div>` : '';
-
-  const stay22BaseUrl = `https://www.stay22.com/embed/gm?aid=parkrunnertourist&lat=${latitude}&lng=${longitude}&maincolor=${isCurrentJunior ? '40e0d0' : '7dd856'}&venue=${encodedName}`;
-  const stay22ExpBaseUrl = `${stay22BaseUrl}&invmode=experience`;
-  const siteName = isCurrentJunior ? 'junior parkrunner tourist' : 'parkrunner tourist';
-  const pageTitle = `${longName} - Hotels & Visitor Guide`;
-  const weatherIframeUrl = `https://parkrunnertourist.com/weather?lat=${latitude}&lon=${longitude}`;
-
-  const accentColor = isCurrentJunior ? '#40e0d0' : '#4caf50';
-  const darkColor   = isCurrentJunior ? '#008080' : '#2e7d32';
-
-  const courseKey = Object.keys(courseMaps).find(k =>
-    k === name ||
-    k === name.toLowerCase() ||
-    k === eventSlug ||
-    k.replace(/-/g,'').toLowerCase() === name.replace(/\s+/g,'').toLowerCase()
-  );
-  const courseData = courseKey ? courseMaps[courseKey] : null;
-  const hasRoute   = courseData && Array.isArray(courseData.route) && courseData.route.length > 1;
-  const hasStart   = hasRoute && Array.isArray(courseData.start)  && courseData.start.length === 2;
-  const hasFinish  = hasRoute && Array.isArray(courseData.finish) && courseData.finish.length === 2;
-  const courseUrl  = (courseData && courseData.url) ? courseData.url : null;
-
-  const seed = eventSeed(name);
-  const encRoute  = hasRoute  ? `"${encryptCoords(courseData.route,           seed)}"` : 'null';
-  const encStart  = hasStart  ? `"${encryptCoords([courseData.start],  seed +  7)}"` : 'null';
-  const encFinish = hasFinish ? `"${encryptCoords([courseData.finish], seed + 13)}"` : 'null';
-
-  const courseTileHtml = `
-<div id="course-terrain-section" class="iframe-container">
-  <h2 class="section-title">Course &amp; Terrain</h2>
-  ${hasRoute ? `
-  <div id="course-preview-wrap" style="position:relative;width:100%;height:260px;border-radius:0.75rem;overflow:hidden;background:#e8f5e9;">
-    <div id="course-preview-map" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;border-radius:0.75rem;"></div>
-    <button onclick="openCourseChoice()" style="position:absolute;bottom:10px;right:10px;z-index:10;
-      background:rgba(255,255,255,0.92);backdrop-filter:blur(10px);border:none;border-radius:16px;
-      padding:7px 14px;font-size:13px;font-weight:600;color:${darkColor};cursor:pointer;
-      box-shadow:0 4px 14px rgba(0,0,0,0.18);display:flex;align-items:center;gap:6px;transition:all 0.2s;"
-      onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
-      <i class="fas fa-expand-alt"></i> Expand &amp; Animate
-    </button>
-    <div style="position:absolute;bottom:10px;left:10px;z-index:10;display:flex;gap:6px;">
-      <span style="background:#28a745;color:#fff;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;">&#9679; Start</span>
-      <span style="background:#dc3545;color:#fff;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;">&#9679; Finish</span>
-    </div>
-  </div>` : `
-  <div style="text-align:center;padding:2rem 0;">
-    <p style="color:#64748b;margin-bottom:1rem;font-size:0.95rem;">Course route data not yet available for this event.</p>
-    <a href="https://${parkrunDomain}/${eventSlug}/course/" target="_blank" class="action-btn" style="font-size:0.9rem;"><i class="fas fa-route"></i> View Course Page</a>
-  </div>`}
-</div>`;
+  // WebPage schema
+  const webPageSchema = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: plainTitle,
+    description: plainDesc,
+    url: canonicalUrl,
+    ...(lat != null ? { spatialCoverage: { '@type': 'Place', name: locationName, geo: { '@type': 'GeoCoordinates', latitude: lat, longitude: lon } } } : {}),
+    publisher: { '@type': 'Organization', name: 'parkrunner tourist', url: 'https://www.parkrunnertourist.com' },
+  });
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${pageTitle}</title>
-<meta name="description" content="Visiting ${longName}? Compare nearby hotels, explore the course map, learn about the terrain, find local experiences and attractions, check the latest weather forecast and plan your perfect parkrun weekend." />
+<title>${title}</title>
+<meta name="description" content="${description}" />
 <meta name="author" content="Jake Lofthouse" />
-<meta name="geo.placename" content="${location}" />
-<meta name="geo.position" content="${latitude};${longitude}" />
-<meta property="og:title" content="${pageTitle}" />
-<meta property="og:description" content="Planning a visit to ${longName}? Discover nearby hotels, explore the course map, learn about the terrain, find local experiences and attractions, check the latest weather forecast and find local cafes." />
-<meta property="og:url" content="https://www.parkrunnertourist.com/explore/${relativePath}" />
-<meta property="og:type" content="article" />
-<meta property="og:image" content="https://www.parkrunnertourist.com/explore/images/${relativePath}.jpg" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="${longName} course map" />
-<meta name="twitter:card" content="https://www.parkrunnertourist.com/explore/images/${relativePath}.jpg" />
-<meta name="twitter:title" content="${pageTitle}" />
-<meta name="twitter:description" content="Planning a visit to ${longName}? Discover nearby hotels, explore the course map, terrain, weather forecast and local cafes." />
+${lat != null ? `<meta name="geo.placename" content="${locationName}" />
+<meta name="geo.position" content="${lat};${lon}" />` : ''}
+<meta property="og:title" content="${title}" />
+<meta property="og:description" content="${description}" />
+<meta property="og:url" content="${canonicalUrl}" />
+<meta property="og:image" content="https://www.parkrunnertourist.com/Images/Feature.jpg">
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="parkrunner tourist" />
+<meta name="twitter:image" content="https://www.parkrunnertourist.com/Images/Feature.jpg" />
+<meta name="twitter:title" content="${title}" />
+<meta name="twitter:description" content="${description}" />
 <meta name="robots" content="index, follow" />
+<link rel="icon" type="image/x-icon" href="https://parkrunnertourist.com/favicon.ico">
 <meta name="language" content="en" />
-<link rel="canonical" href="https://www.parkrunnertourist.com/explore/${relativePath}" />
+<meta name="apple-itunes-app" content="app-id=6743163993, app-argument=https://www.parkrunnertourist.com">
+<link rel="canonical" href="${canonicalUrl}" />
+<link rel="sitemap" type="application/xml" href="${BASE_LOCATIONS_URL}/sitemap.xml" />
+<script type="application/ld+json">${breadcrumbSchema}</script>
+<script type="application/ld+json">${webPageSchema}</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -269,412 +486,21 @@ function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', 'G-REFFZSK4XK');
 </script>
-<style>
-* { box-sizing: border-box; }
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  margin: 0; padding: 0;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  line-height: 1.6;
+</head>`;
 }
-header {
-  background: linear-gradient(135deg, ${isCurrentJunior ? '#40e0d0 0%, #008080 100%' : '#2e7d32 0%, #1b5e20 100%'});
-  color: white; padding: 1.5rem 2rem; font-weight: 600; font-size: 1.75rem;
-  display: flex; justify-content: space-between; align-items: center;
-  box-shadow: 0 4px 20px rgba(${isCurrentJunior ? '0,128,128' : '46,125,50'}, 0.3);
-  position: relative; overflow: hidden;
-}
-header::before {
-  content: ''; position: absolute; top:0;left:0;right:0;bottom:0;
-  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
-  pointer-events: none;
-}
-header a { color:white;text-decoration:none;cursor:pointer;position:relative;z-index:1;transition:transform 0.3s ease; }
-header a:hover { transform: translateY(-2px); }
-.header-map-btn {
-  padding: 0.5rem 1.25rem; background: rgba(255,255,255,0.2);
-  border: 2px solid white; border-radius: 0.5rem; color: white;
-  font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;
-  position: relative; z-index: 1; text-decoration: none; display: inline-block;
-}
-.header-map-btn:hover { background: white; color: ${darkColor}; transform: translateY(-2px); }
-main { padding: 3rem 2rem; max-width: 1400px; margin: 0 auto; }
-h1 {
-  font-size: 7rem; font-weight: 800; margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, ${darkColor}, ${accentColor});
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  text-align: center; position: relative; padding: 2rem 0 1rem 0; line-height: 1.2;
-}
-.description {
-  background: white; padding: 2rem; border-radius: 1rem;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom: 3rem;
-  border: 1px solid rgba(${isCurrentJunior ? '64,224,208' : '76,175,80'}, 0.2);
-}
-.description p { margin: 0; color: #374151; font-size: 1.1rem; }
-.section-title {
-  font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;
-  color: #1f2937; display: flex; align-items: center; gap: 0.5rem;
-}
-.section-title::before {
-  content: ''; width: 4px; height: 1.5rem;
-  background: linear-gradient(135deg, ${accentColor}, ${darkColor}); border-radius: 2px;
-}
-.toggle-btn {
-  padding: 0.75rem 1.5rem; border-radius: 0.75rem; margin-right: 1rem; margin-bottom: 1rem;
-  cursor: pointer; font-weight: 600; border: 2px solid ${accentColor};
-  transition: all 0.3s ease; background-color: white; color: ${accentColor};
-  user-select: none; font-size: 1rem;
-}
-.toggle-btn:hover:not(.active) { background-color: #f1f8e9; }
-.toggle-btn.active {
-  background: linear-gradient(135deg, ${accentColor}, ${darkColor});
-  color: white; transform: translateY(-2px);
-}
-.content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
-.iframe-container {
-  background: white; border-radius: 1rem; padding: 1rem;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-  border: 1px solid rgba(${isCurrentJunior ? '64,224,208' : '76,175,80'}, 0.2); overflow: hidden;
-}
-.map-container {
-  width: 100%;
-  height: 400px;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  position: relative;
-}
-.map-label {
-  position: absolute;
-  top: -45px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: white;
-  padding: 6px 14px;
-  border-radius: 9999px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  font-weight: 700;
-  font-size: 1.05rem;
-  color: #1f2937;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
-}
-.weather-iframe { height: 300px; width: 100%; }
-.accommodation-iframe { height: 600px; overflow-x: hidden; }
-.parkrun-actions { display: flex; gap: 1rem; margin-bottom: 3rem; flex-wrap: wrap; justify-content: center; }
-.action-btn {
-  padding: 0.75rem 1.5rem; border-radius: 0.75rem; cursor: pointer; font-weight: 600;
-  border: 2px solid ${accentColor}; transition: all 0.3s ease;
-  background: linear-gradient(135deg, ${accentColor}, ${darkColor});
-  color: white; text-decoration: none; display: inline-block; font-size: 1rem;
-  box-shadow: 0 4px 15px rgba(${isCurrentJunior ? '64,224,208' : '76,175,80'}, 0.3);
-}
-.action-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(${isCurrentJunior ? '64,224,208' : '76,175,80'}, 0.4); }
-#course-map-modal {
-  display: none; position: fixed; top:0;left:0;width:100%;height:100%;
-  z-index: 9999; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px);
-  align-items: center; justify-content: center;
-}
-#course-map-modal.show { display: flex; }
-.course-modal-inner {
-  background: #fff; border-radius: 20px; max-width: 560px; width: 96%; max-height: 92vh;
-  overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,0.4);
-  display: flex; flex-direction: column; position: relative;
-}
-.course-modal-header {
-  padding: 13px 16px 11px; border-bottom: 1px solid rgba(0,0,0,0.08);
-  display: flex; align-items: center; justify-content: space-between;
-  flex-shrink: 0; background: #fff;
-}
-.course-modal-title { font-size: 15px; font-weight: 700; color: rgba(0,0,0,0.87); }
-.course-modal-close {
-  background: rgba(0,0,0,0.07); border: none; border-radius: 50%;
-  width: 30px; height: 30px; cursor: pointer; font-size: 14px;
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(0,0,0,0.5); transition: background 0.2s;
-}
-.course-modal-close:hover { background: rgba(0,0,0,0.14); }
-.course-modal-body { overflow-y: auto; flex: 1; display: flex; flex-direction: column; background: #fff; }
-#course-map-wrap {
-  position: relative; width: 100%; height: 320px; flex-shrink: 0;
-  touch-action: none; user-select: none; overflow: hidden;
-}
-#course-modal-map { position: absolute; top:0;left:0;width:100%;height:100%;z-index:1; }
-#course-animation-canvas { position: absolute; top:0;left:0;pointer-events:none;z-index:650;display:block; }
-.course-video-controls {
-  background: #fff; padding: 0 14px 12px;
-  display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;
-  border-top: 1px solid rgba(0,0,0,0.07);
-}
-.course-progress-bar-wrap {
-  position: relative; height: 4px; background: rgba(0,0,0,0.12);
-  border-radius: 2px; cursor: pointer; margin: 10px 0 4px;
-  transition: height 0.15s, margin-top 0.15s; user-select: none;
-}
-.course-progress-bar-wrap:hover,
-.course-progress-bar-wrap.dragging { height: 7px; margin-top: 7px; }
-.course-progress-bar-fill {
-  height: 100%; background: #28a745; border-radius: 2px;
-  pointer-events: none; position: relative;
-}
-.course-progress-bar-fill::after {
-  content: ''; position: absolute; right: -6px; top: 50%;
-  transform: translateY(-50%) scale(0);
-  width: 13px; height: 13px; background: #28a745; border-radius: 50%;
-  transition: transform 0.15s; pointer-events: none;
-}
-.course-progress-bar-wrap:hover .course-progress-bar-fill::after,
-.course-progress-bar-wrap.dragging .course-progress-bar-fill::after { transform: translateY(-50%) scale(1); }
-.course-video-row { display: flex; align-items: center; gap: 6px; }
-.course-ctrl-btn {
-  background: none; color: rgba(0,0,0,0.75); border: none; border-radius: 6px;
-  padding: 5px 8px; font-size: 16px; cursor: pointer;
-  transition: background 0.15s; display: flex; align-items: center; gap: 5px;
-  position: relative; overflow: hidden;
-}
-.course-ctrl-btn:hover { background: rgba(0,0,0,0.07); }
-.course-time-label { font-size: 13px; color: rgba(0,0,0,0.5); font-variant-numeric: tabular-nums; }
-#elevation-chart-container {
-  background: #fff; padding: 12px 14px 14px; flex-shrink: 0;
-  border-top: 1px solid rgba(0,0,0,0.07);
-}
-.elevation-label {
-  font-size: 11px; font-weight: 700; color: rgba(0,0,0,0.35);
-  text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 6px;
-}
-.leaflet-control-attribution { display: none !important; }
-.nearby-list { list-style: none; padding: 0; margin: 0; }
-.nearby-item {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 1rem; padding: 0.5rem; border-radius: 0.5rem;
-  background: #f8fafc; transition: background 0.3s;
-}
-.nearby-item:hover { background: #e2e8f0; }
-.nearby-list a { color: ${accentColor}; text-decoration: none; font-weight: 500; }
-.nearby-list a:hover { color: ${darkColor}; }
-.distance { font-size: 0.9rem; color: #64748b; }
-.cancel-banner { background: #ef4444; color: white; text-align: center; padding: 1rem; font-weight: bold; margin-bottom: 2rem; display: none; }
-.status-icon { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-size: 16px; margin-right: 8px; }
-.green { background: #22c55e; color: white; }
-.yellow { background: #eab308; color: white; }
-.red { background: #ef4444; color: white; }
-.cancel-tile p, .further-tile li { display: flex; align-items: center; }
-.further-tile li { margin-bottom: 0.5rem; }
-.last-update { font-size: 0.8rem; color: #64748b; margin-top: 0.5rem; }
-.left-column { grid-column: 1; display: flex; flex-direction: column; gap: 2rem; }
-.right-column { grid-column: 2; display: flex; flex-direction: column; gap: 2rem; }
-.download-footer {
-  background: linear-gradient(135deg, ${accentColor} 0%, ${darkColor} 100%);
-  padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
-  color: white; font-weight: 700; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 1px;
-}
-.app-badges { display: flex; gap: 2rem; }
-.download-footer img { height: 70px; width: auto; transition: transform 0.3s ease; cursor: pointer; border-radius: 0.5rem; }
-.download-footer img:hover { transform: scale(1.1) translateY(-4px); }
-footer { text-align: center; padding: 2rem; background: #f8fafc; color: #64748b; font-weight: 500; }
-@media (max-width: 1024px) {
-  .content-grid { display: flex; flex-direction: column; gap: 1.5rem; }
-  .left-column, .right-column { display: contents; }
-  #cancel-tile { order:1; } #further-tile { order:2; }
-  #weather-section { order:4; } #location-section { order:5; }
-  #hotels-section { order:6; } #experiences-section { order:7; }
-  #course-terrain-section { order:3; } #nearby-section { order:8; }
-  [data-name="BMC-Widget"] { display: none !important; }
-}
-@media (max-width: 768px) {
-  main { padding: 2rem 1rem; }
-  h1 { font-size: 4rem; }
-  header { padding: 1rem; font-size: 1.3rem; }
-  .toggle-btn { margin-bottom: 0.5rem; margin-right: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem; }
-  .app-badges { flex-direction: column; gap: 1rem; align-items: center; }
-  .accommodation-iframe, .map-iframe { height: 400px; }
-  .weather-iframe { height: 200px; }
-}
-body.modal-open { overflow: hidden; height: 100vh; }
-.social-row {
-  margin-bottom: 1rem; display: flex; justify-content: center;
-  gap: 1.5rem; font-size: 1.4rem;
-}
-.social-icon { color: #64748b; transition: all 0.25s ease; }
-.social-icon:hover .fa-facebook { color: #1877f2; }
-.social-icon:hover .fa-youtube { color: #ff0000; }
-.social-icon:hover .fa-tiktok { color: #000; }
-.social-icon:hover .fa-envelope { color: #4caf50; }
-</style>
-<script type="application/ld+json">
-{"@context":"https://schema.org","@graph":[{"@type":"SportsEvent","name":"${longName}","description":"Visitor guide to ${longName}. Hotels, course map, weather forecast and travel information.","sport":"Running","eventAttendanceMode":"OfflineEventAttendanceMode","location":{"@type":"Place","name":"${location}","geo":{"@type":"GeoCoordinates","latitude":"${latitude}","longitude":"${longitude}"}},"url":"https://www.parkrunnertourist.com/explore/${relativePath}"},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is the weather like at ${longName} this week?","acceptedAnswer":{"@type":"Answer","text":"Check the Weather This Week section for the forecast."}},{"@type":"Question","name":"Where is ${longName} held?","acceptedAnswer":{"@type":"Answer","text":"${longName} takes place at ${location}."}},{"@type":"Question","name":"Where can I find hotels near ${longName}?","acceptedAnswer":{"@type":"Answer","text":"The Hotels and Rentals section lists nearby accommodations."}}]}]}
-</script>
-</head>
-<body>
-<header>
-  <a href="https://www.parkrunnertourist.com" target="_self">${siteName}</a>
-  <a href="https://download.parkrunnertourist.com/DXFn/34irtvw6" target="_blank" class="header-map-btn">Show Full Map</a>
-</header>
-<div id="cancel-banner" class="cancel-banner"></div>
-<main>
-  <h1>${longName} - Hotels &amp; Visitor Guide</h1>
-  <div class="parkrun-actions">
-    ${(hasRoute || courseUrl)
-      ? `<button onclick="openCourseChoice()" class="action-btn course-map-btn">Course Map</button>`
-      : `<a href="https://${parkrunDomain}/${eventSlug}/course/" target="_blank" class="action-btn course-map-btn">Course Map</a>`}
-    <a href="https://${parkrunDomain}/${eventSlug}/futureroster/" target="_blank" class="action-btn">Volunteer Roster</a>
-    <a href="https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}" target="_blank" class="action-btn">Directions</a>
-  </div>
-  ${hasDescription ? `<div class="description">${description}</div>` : ''}
-  <div class="content-grid">
-    <div class="left-column">
-      <div id="hotels-section" class="iframe-container">
-        <h2 class="section-title">Hotels &amp; Rentals</h2>
-        <div>
-          <button class="toggle-btn active" onclick="switchView('hotels','listview')" id="btn-listview-hotels">List View</button>
-          <button class="toggle-btn" onclick="switchView('hotels','map')" id="btn-map-hotels">Map View</button>
-        </div>
-        <iframe id="stay22Frame" class="accommodation-iframe" width="100%" scrolling="no"
-          title="Stay22 accommodation listing"></iframe>
-      </div>
-      <div id="experiences-section" class="iframe-container">
-        <h2 class="section-title">Experiences</h2>
-        <div>
-          <button class="toggle-btn active" onclick="switchView('experiences','listview')" id="btn-listview-exp">List View</button>
-          <button class="toggle-btn" onclick="switchView('experiences','map')" id="btn-map-exp">Map View</button>
-        </div>
-        <iframe id="stay22ExpFrame" class="accommodation-iframe" width="100%" scrolling="no"
-          title="Stay22 experiences listing"></iframe>
-      </div>
-    </div>
-    <div class="right-column">
-      <div id="location-section" class="iframe-container" style="position:relative;">
-        <h2 class="section-title">parkrun Location</h2>
-        <div id="event-map" class="map-container"></div>
-      </div>
-      <div id="weather-section" class="iframe-container">
-        <h2 class="section-title">Weather This Week</h2>
-        <iframe class="weather-iframe" data-src="${weatherIframeUrl}" title="Weather forecast for ${name}"></iframe>
-      </div>
-      ${courseTileHtml}
-      ${nearbyHtml}
-      <div id="cancel-tile" class="iframe-container cancel-tile" style="display:none;">
-        <h2 class="section-title">Event Status</h2>
-        <p id="cancel-message"></p>
-        <div id="cancel-update" class="last-update"></div>
-      </div>
-      <div id="further-tile" class="iframe-container further-tile" style="display:none;">
-        <h2 class="section-title">Future Cancellations</h2>
-        <ul id="further-list"></ul>
-        <div id="further-update" class="last-update"></div>
-      </div>
-    </div>
-  </div>
-</main>
 
-<!-- Course Choice Modal -->
-<div id="course-choice-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-  z-index:10000;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);
-  align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:20px;max-width:420px;width:92%;padding:2rem;
-    box-shadow:0 32px 80px rgba(0,0,0,0.4);position:relative;">
-    <button onclick="closeCourseChoice()" style="position:absolute;top:14px;right:14px;
-      background:rgba(0,0,0,0.07);border:none;border-radius:50%;width:30px;height:30px;
-      cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
-      color:rgba(0,0,0,0.5);">&times;</button>
-    <h3 style="margin:0 0 0.5rem 0;font-size:1.1rem;font-weight:700;color:#1f2937;">Course Map</h3>
-    <p style="margin:0 0 1.5rem 0;font-size:0.9rem;color:#64748b;">Choose how you want to view the course.</p>
-    <div style="display:flex;flex-direction:row;gap:0.75rem;">
-      ${courseUrl ? `
-      <button onclick="closeCourseChoice();openStandardMap();"
-        style="flex:1;padding:1.25rem 1rem;border-radius:0.75rem;border:2px solid ${accentColor};
-          background:#fff;color:${darkColor};
-          font-weight:600;font-size:1rem;cursor:pointer;text-align:center;
-          display:flex;flex-direction:column;align-items:center;gap:0.5rem;transition:all 0.2s;"
-        onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#fff'">
-        <i class="fas fa-map" style="font-size:1.5rem;color:${accentColor};"></i>
-        <strong>Standard</strong>
-        <span style="font-size:0.78rem;font-weight:400;color:#64748b;line-height:1.3;">Interactive map view</span>
-      </button>` : ''}
-      ${hasRoute ? `
-      <button onclick="closeCourseChoice();openCourseModal();"
-        style="flex:1;padding:1.25rem 1rem;border-radius:0.75rem;border:2px solid ${accentColor};
-          background:linear-gradient(135deg,${accentColor},${darkColor});color:#fff;
-          font-weight:600;font-size:1rem;cursor:pointer;text-align:center;
-          display:flex;flex-direction:column;align-items:center;gap:0.5rem;transition:all 0.2s;"
-        onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
-        <i class="fas fa-route" style="font-size:1.5rem;"></i>
-        <strong>Advanced</strong>
-        <span style="font-size:0.78rem;font-weight:400;opacity:0.9;line-height:1.3;">Animated route &amp; elevation</span>
-      </button>` : ''}
-    </div>
-  </div>
-</div>
 
-<!-- Standard Course Map Modal -->
-<div id="standard-map-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-  z-index:10000;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);
-  align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:20px;max-width:700px;width:96%;
-    box-shadow:0 32px 80px rgba(0,0,0,0.4);overflow:hidden;display:flex;flex-direction:column;">
-    <div style="padding:13px 16px 11px;border-bottom:1px solid rgba(0,0,0,0.08);
-      display:flex;align-items:center;justify-content:space-between;background:#fff;flex-shrink:0;">
-      <div style="font-size:15px;font-weight:700;color:rgba(0,0,0,0.87);">${longName} — Course Map</div>
-      <button onclick="closeStandardMap()"
-        style="background:rgba(0,0,0,0.07);border:none;border-radius:50%;width:30px;height:30px;
-          cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;
-          color:rgba(0,0,0,0.5);">&times;</button>
-    </div>
-    <iframe id="standard-map-iframe"
-      style="width:100%;height:500px;border:none;display:block;"
-      src="" title="${longName} course map" allowfullscreen></iframe>
-  </div>
-</div>
+// Exact header from generate-events.js (non-junior variant — location pages are always non-junior)
+function htmlHeader() {
+  return `<header>
+  <a href="https://www.parkrunnertourist.com" target="_self">${SITE_NAME}</a>
+  <a href="https://www.parkrunnertourist.com/webapp" target="_blank" class="header-map-btn">Show Full Map</a>
+</header>`;
+}
 
-<!-- Contact Modal -->
-<div id="contact-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-  z-index:10000;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);
-  align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:20px;width:95%;max-width:700px;height:85%;
-    box-shadow:0 32px 80px rgba(0,0,0,0.4);position:relative;overflow:hidden;display:flex;flex-direction:column;">
-    <button onclick="closeContactModal()" style="position:absolute;top:12px;right:12px;
-      background:rgba(0,0,0,0.07);border:none;border-radius:50%;width:32px;height:32px;
-      cursor:pointer;font-size:16px;">&times;</button>
-    <iframe
-      src="https://forms.office.com/Pages/ResponsePage.aspx?id=DQSIkWdsW0yxEjajBLZtrQAAAAAAAAAAAAN__tNkQhJUREJVMVA2OUJVVVlXMTBLUUo1MUI2REc5SC4u&embed=true"
-      style="border:none;width:100%;height:100%;border-radius:20px;"
-      allowfullscreen>
-    </iframe>
-  </div>
-</div>
-
-<!-- Course Map Modal -->
-<div id="course-map-modal">
-  <div class="course-modal-inner">
-    <div class="course-modal-header">
-      <div class="course-modal-title" id="course-modal-title">Course Route</div>
-      <button class="course-modal-close" onclick="closeCourseModal()">&times;</button>
-    </div>
-    <div class="course-modal-body">
-      <div id="course-map-wrap">
-        <div id="course-modal-map"></div>
-        <canvas id="course-animation-canvas"></canvas>
-      </div>
-      <div class="course-video-controls">
-        <div class="course-progress-bar-wrap" id="course-progress-wrap">
-          <div class="course-progress-bar-fill" id="course-progress-fill" style="width:0%"></div>
-        </div>
-        <div class="course-video-row">
-          <button class="course-ctrl-btn" id="course-play-btn" onclick="toggleCourseAnimation()">
-            <i class="fas fa-play"></i>
-          </button>
-          <span class="course-time-label" id="course-time-label">0:00 / 0:30</span>
-        </div>
-      </div>
-      <div id="elevation-chart-container">
-        <div class="elevation-label">Elevation Profile — click to jump</div>
-        <canvas id="elevation-chart" height="100"></canvas>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="download-footer">
+// Exact footer from generate-events.js
+function htmlFooter() {
+  return `<div class="download-footer">
   Download The App
   <div class="app-badges">
     <a href="https://apps.apple.com/gb/app/parkrunner-tourist/id6743163993" target="_blank" rel="noopener noreferrer">
@@ -690,675 +516,846 @@ body.modal-open { overflow: hidden; height: 100vh; }
     parkrun is a registered trademark of parkrun Limited.
     This website is independent and is not affiliated with or endorsed by parkrun.
   </p>
-  <div class="social-row">
-    <a href="https://www.facebook.com/profile.php?id=61585873650397" target="_blank" class="social-icon">
-      <i class="fab fa-facebook"></i>
-    </a>
-    <a href="https://www.youtube.com/@parkrunnertourist-app" target="_blank" class="social-icon">
-      <i class="fab fa-youtube"></i>
-    </a>
-    <a href="https://www.tiktok.com/@parkrunner.tourist.app" target="_blank" class="social-icon">
-      <i class="fab fa-tiktok"></i>
-    </a>
-    <a href="#" onclick="openContactModal()" class="social-icon">
-      <i class="fas fa-envelope"></i>
-    </a>
-  </div>
-  <p style="font-size:0.9rem;color:#64748b;">
-    &copy; ${new Date().getFullYear()} ${siteName}
-  </p>
+  &copy; ${new Date().getFullYear()} ${SITE_NAME}
 </footer>
-
 <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js"
   data-id="jlofthouse" data-description="Support me on Buy me a coffee!"
-  data-message="Support The App" data-color="#40DCA5" data-position="Right"
+  data-message="" data-color="#40DCA5" data-position="Right"
   data-x_margin="18" data-y_margin="18"></script>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
-${decryptFnJs()}
+// Count-up animation for .stat-strip-value elements.
+// Triggers when the stat strip scrolls into view. Each digit ticks up
+// independently like an old terminal display, starting slightly offset
+// from each other for a typewriter feel.
+(function() {
+  var strip = document.querySelector('.stat-strip');
+  if (!strip) return;
 
-const _er = ${encRoute};
-const _es = ${encStart};
-const _ef = ${encFinish};
-const _sk = ${seed};
-const _courseRoute  = _er ? _d(_er, _sk)         : null;
-const _courseStart  = _es ? _d(_es, _sk +  7)[0] : null;
-const _courseFinish = _ef ? _d(_ef, _sk + 13)[0] : null;
-const HAS_ROUTE = !!(_courseRoute && _courseRoute.length > 1);
+  var items = strip.querySelectorAll('.stat-strip-value');
+  if (!items.length) return;
 
-function getNextFridayDateISO() {
-  const today = new Date();
-  const day = today.getDay();
-  const daysUntilFriday = (5 - day + 7) % 7 || 7;
-  today.setDate(today.getDate() + daysUntilFriday);
-  return today.toISOString().slice(0, 10);
-}
-const _checkinDate   = getNextFridayDateISO();
-const _stay22Base    = "${stay22BaseUrl}&checkin=" + _checkinDate;
-const _stay22ExpBase = "${stay22ExpBaseUrl}&checkin=" + _checkinDate;
+  // Store raw numeric targets (strip commas/non-digits)
+  var targets = Array.prototype.map.call(items, function(el) {
+    return parseInt(el.textContent.replace(/[^0-9]/g, ''), 10) || 0;
+  });
+  // Hide the real values; we'll animate to them
+  Array.prototype.forEach.call(items, function(el) { el.textContent = '0'; });
 
-document.getElementById('stay22Frame').src    = _stay22Base    + '&viewmode=listview&listviewexpand=true';
-document.getElementById('stay22ExpFrame').src = _stay22ExpBase + '&viewmode=listview&listviewexpand=true';
-
-function switchView(type, mode) {
-  const id      = type === 'hotels' ? 'stay22Frame' : 'stay22ExpFrame';
-  const baseUrl = type === 'hotels' ? _stay22Base : _stay22ExpBase;
-  document.getElementById(id).src = baseUrl + '&viewmode=' + mode + '&listviewexpand=' + (mode === 'listview');
-  const pfx = type === 'hotels' ? 'hotels' : 'exp';
-  document.getElementById('btn-listview-' + pfx).classList.toggle('active', mode === 'listview');
-  document.getElementById('btn-map-'      + pfx).classList.toggle('active', mode === 'map');
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  const isBot = /bot|crawler|spider|facebookexternalhit|twitterbot|linkedinbot|googlebot|bingbot/i.test(navigator.userAgent);
-  if (!isBot && 'IntersectionObserver' in window) {
-    const obs = new IntersectionObserver(entries => {
-      entries.forEach(e => {
-        if (e.isIntersecting && !e.target.src) {
-          e.target.src = e.target.dataset.src; obs.unobserve(e.target);
-        }
-      });
-    }, { rootMargin: '50px' });
-    document.querySelectorAll('iframe[data-src]').forEach(f => obs.observe(f));
-  } else if (!isBot) {
-    setTimeout(() => document.querySelectorAll('iframe[data-src]').forEach(f => { if (!f.src) f.src = f.dataset.src; }), 1000);
+  function animateItem(el, target, delay) {
+    setTimeout(function() {
+      var duration = Math.min(1200, Math.max(400, target * 0.8));
+      var start = null;
+      function tick(ts) {
+        if (!start) start = ts;
+        var progress = Math.min((ts - start) / duration, 1);
+        // Ease out: decelerate toward the end
+        var eased = 1 - Math.pow(1 - progress, 3);
+        var current = Math.round(eased * target);
+        el.textContent = current.toLocaleString();
+        if (progress < 1) requestAnimationFrame(tick);
+        else el.textContent = target.toLocaleString();
+      }
+      requestAnimationFrame(tick);
+    }, delay);
   }
 
-  (async function() {
-    try {
-      const [upcoming, further, lastUpdate] = await Promise.all([
-        fetch('https://www.parkrunnertourist.com/cancellations/upcoming.json').then(r => r.json()),
-        fetch('https://www.parkrunnertourist.com/cancellations/further.json').then(r => r.json()),
-        fetch('https://www.parkrunnertourist.com/cancellations/lastupdate.json').then(r => r.json())
-      ]);
-      const eventName = '${longName}';
-      const upcomingCancel = upcoming.find(c => c.name === eventName);
-      const furtherCancels = further.filter(c => c.name === eventName);
-      const updateTime = lastUpdate.updated_utc ? new Date(lastUpdate.updated_utc).toLocaleString() : 'Unknown';
-      const cancelTile = document.getElementById('cancel-tile');
-      cancelTile.style.display = 'block';
-      document.getElementById('cancel-update').textContent = 'Last updated: ' + updateTime;
-      if (upcomingCancel) {
-        const b = document.getElementById('cancel-banner');
-        b.textContent = 'This event is cancelled on ' + upcomingCancel.date + ': ' + upcomingCancel.reason;
-        b.style.display = 'block';
-        document.getElementById('cancel-message').innerHTML = '<span class="status-icon red">!</span> Cancelled: ' + upcomingCancel.reason + ' on ' + upcomingCancel.date;
-      } else {
-        document.getElementById('cancel-message').innerHTML = '<span class="status-icon green">&#10003;</span> Event is running as scheduled';
-      }
-      if (furtherCancels.length > 0) {
-        document.getElementById('further-tile').style.display = 'block';
-        document.getElementById('further-update').textContent = 'Last updated: ' + updateTime;
-        document.getElementById('further-list').innerHTML = furtherCancels.map(c =>
-          '<li><span class="status-icon yellow">!</span> ' + c.reason + ' on ' + c.date + '</li>').join('');
-      }
-    } catch (e) { console.warn('Cancellations:', e); }
-  })();
-
-  if (HAS_ROUTE) setTimeout(initCoursePreview, 100);
-
-  const mapEl = document.getElementById('event-map');
-  if (mapEl) {
-    const locMap = L.map('event-map', {
-      zoomControl: true, scrollWheelZoom: true, attributionControl: false
+  function runAnimation() {
+    targets.forEach(function(target, i) {
+      animateItem(items[i], target, i * 120);
     });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19
-    }).addTo(locMap);
-    const iconUrl = ${isCurrentJunior ? "'../../Icons/Junior.png'" : "'../../Icons/5k.png'"};
-    const customIcon = L.icon({
-      iconUrl: iconUrl, iconSize: [48, 48], iconAnchor: [24, 42], popupAnchor: [0, -40]
-    });
-    L.marker([${latitude}, ${longitude}], { icon: customIcon }).addTo(locMap);
-    const label = document.createElement('div');
-    label.className = 'map-label';
-    label.textContent = '${longName}';
-    mapEl.appendChild(label);
-    locMap.setView([${latitude}, ${longitude}], 15);
   }
+
+  if ('IntersectionObserver' in window) {
+    var obs = new IntersectionObserver(function(entries) {
+      if (entries[0].isIntersecting) { runAnimation(); obs.disconnect(); }
+    }, { threshold: 0.3 });
+    obs.observe(strip);
+  } else {
+    runAnimation();
+  }
+})();
+</script>`;
+}
+
+// Exact CSS from generate-events.js (non-junior palette) — extended with warmer location styles
+function sharedStyles() {
+  return `<style>
+* { box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0; padding: 0;
+  background: #f6f8f3;
+  line-height: 1.6;
+  color: #1a2318;
+}
+header {
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+  color: white; padding: 1.5rem 2rem; font-weight: 600; font-size: 1.75rem;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 4px 20px rgba(46,125,50,0.3);
+  position: relative; overflow: hidden;
+}
+header::before {
+  content: ''; position: absolute; top:0;left:0;right:0;bottom:0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+  pointer-events: none;
+}
+header a { color:white;text-decoration:none;cursor:pointer;position:relative;z-index:1;transition:transform 0.3s ease; }
+header a:hover { transform: translateY(-2px); }
+.header-map-btn {
+  padding: 0.5rem 1.25rem; background: rgba(255,255,255,0.2);
+  border: 2px solid white; border-radius: 0.5rem; color: white;
+  font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;
+  position: relative; z-index: 1; text-decoration: none; display: inline-block;
+}
+.header-map-btn:hover { background: white; color: #2e7d32; transform: translateY(-2px); }
+/* breadcrumb */
+.breadcrumb {
+  font-size: 0.825rem; color: #64748b; padding: 0.65rem 2rem;
+  background: white; border-bottom: 1px solid #e5eae0;
+  display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;
+}
+.breadcrumb a { color: #4caf50; text-decoration: none; font-weight: 500; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb-sep { opacity: 0.35; }
+/* page hero */
+main { padding: 2.5rem 2rem 5rem; max-width: 1300px; margin: 0 auto; }
+.hero { padding: 2rem 0 1.5rem; border-bottom: 1px solid #dde5d8; margin-bottom: 2rem; }
+.hero-eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #4caf50; margin-bottom: 0.35rem; }
+.hero-title { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 800; color: #1a2318; line-height: 1.15; margin: 0 0 0.5rem; }
+.hero-sub { font-size: 0.975rem; color: #5a6e52; max-width: 600px; line-height: 1.6; margin: 0; }
+/* stat strip */
+.stat-strip {
+  display: flex; margin-bottom: 2rem;
+  background: white; border: 1px solid #dde5d8; border-radius: 0.875rem; overflow: hidden;
+}
+.stat-strip-item {
+  flex: 1; padding: 1rem 1.25rem; display: flex; flex-direction: column;
+  border-right: 1px solid #dde5d8;
+}
+.stat-strip-item:last-child { border-right: none; }
+.stat-strip-value {
+  font-size: 1.5rem; font-weight: 800; color: #2e7d32; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-strip-label { font-size: 0.72rem; color: #7a8f72; margin-top: 0.2rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+/* section headings */
+.section-heading {
+  font-size: 1rem; font-weight: 700; color: #1a2318;
+  margin: 2rem 0 0.875rem; display: flex; align-items: center; gap: 0.5rem;
+}
+.section-heading::after { content: ''; flex: 1; height: 1px; background: #dde5d8; }
+/* country grid */
+.country-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 0.75rem; }
+.country-card {
+  background: white; border: 1px solid #dde5d8; border-radius: 0.75rem;
+  padding: 0.85rem 0.95rem; text-decoration: none; color: inherit;
+  display: flex; align-items: center; gap: 0.65rem;
+  transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s;
+}
+.country-card:hover { box-shadow: 0 3px 14px rgba(46,125,50,0.12); transform: translateY(-2px); border-color: #b2d8b4; }
+.country-card-flag { font-size: 1.65rem; line-height: 1; flex-shrink: 0; }
+.country-card-body { flex: 1; min-width: 0; }
+.country-card h3 { font-weight: 700; font-size: 0.875rem; color: #1a2318; margin: 0 0 0.1rem; }
+.country-card p { font-size: 0.73rem; color: #7a8f72; margin: 0; }
+.country-card-arrow { color: #c8d8c0; font-size: 0.7rem; flex-shrink: 0; }
+/* tiles */
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.625rem; margin-bottom: 2rem; }
+.tile {
+  background: white; border: 1px solid #dde5d8; border-radius: 0.625rem;
+  padding: 0.8rem 0.95rem; display: flex; align-items: center; justify-content: space-between;
+  text-decoration: none; color: inherit;
+  transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s;
+}
+.tile:hover { box-shadow: 0 3px 12px rgba(46,125,50,0.1); transform: translateY(-2px); border-color: #b2d8b4; }
+.tile-name { font-weight: 600; font-size: 0.875rem; color: #1a2318; }
+.tile-count { background: #eef6ee; color: #2e7d32; font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 99px; flex-shrink: 0; margin-left: 0.4rem; }
+/* search */
+.search-wrap { position: relative; margin-bottom: 1.25rem; }
+.search-icon { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem; pointer-events: none; }
+.search-input {
+  width: 100%; padding: 0.65rem 1rem 0.65rem 2.4rem;
+  border: 1.5px solid #dde5d8; border-radius: 0.625rem;
+  font-family: 'Inter', sans-serif; font-size: 0.925rem; background: white; outline: none; color: #1a2318;
+  transition: border 0.18s;
+}
+.search-input:focus { border-color: #4caf50; }
+.search-input::placeholder { color: #aab8a2; }
+/* filter bar (junior / 5k toggle) */
+.filter-bar {
+  display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;
+}
+.filter-label { font-size: 0.8rem; font-weight: 600; color: #7a8f72; margin-right: 0.25rem; }
+.event-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(285px, 1fr)); gap: 1.1rem; }
+.event-card {
+  background: white; border-radius: 0.875rem; overflow: hidden;
+  border: 1px solid #dde5d8;
+  display: flex; flex-direction: column;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+}
+.event-card:hover { box-shadow: 0 5px 20px rgba(46,125,50,0.13); transform: translateY(-3px); border-color: #b2d8b4; }
+.card-map-wrap { height: 180px; position: relative; background: #e8f0e5; flex-shrink: 0; overflow: hidden; }
+.card-map-inner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.card-map-badges { position: absolute; bottom: 7px; left: 7px; z-index: 10; display: flex; gap: 4px; }
+.card-map-badge { border-radius: 6px; padding: 2px 7px; font-size: 10px; font-weight: 700; color: #fff; }
+.card-map-badge.start { background: #28a745; }
+.card-map-badge.finish { background: #dc3545; }
+.card-body { padding: 0.875rem 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+.card-name { font-weight: 700; font-size: 0.95rem; color: #1a2318; line-height: 1.3; }
+.card-location { font-size: 0.775rem; color: #7a8f72; display: flex; align-items: center; gap: 0.3rem; }
+.card-badges { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: auto; padding-top: 0.35rem; }
+.card-badge { font-size: 0.66rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 99px; }
+.card-badge.junior { background: #e0f7fa; color: #006064; }
+.card-cta {
+  display: block; margin: 0.5rem 0.875rem 0.875rem;
+  padding: 0.55rem 1rem; text-align: center;
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  color: white; border-radius: 0.5rem; font-weight: 600; font-size: 0.825rem;
+  text-decoration: none; transition: opacity 0.18s, transform 0.18s;
+}
+.card-cta:hover { opacity: 0.87; transform: translateY(-1px); }
+/* hotel CTA */
+.hotel-cta {
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+  border-radius: 0.875rem; padding: 1.4rem 1.6rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.25rem; margin-bottom: 2rem; flex-wrap: wrap;
+}
+.hotel-cta-text h2 { font-size: 1.15rem; font-weight: 700; color: white; margin: 0 0 0.2rem; }
+.hotel-cta-text p { font-size: 0.85rem; color: rgba(255,255,255,0.73); margin: 0; }
+.hotel-cta-btn {
+  background: white; color: #2e7d32; font-weight: 700; font-size: 0.875rem;
+  padding: 0.6rem 1.4rem; border-radius: 0.5rem; white-space: nowrap;
+  border: none; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s; flex-shrink: 0;
+  font-family: 'Inter', sans-serif;
+}
+.hotel-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.14); }
+/* toggle buttons */
+.toggle-btn {
+  padding: 0.45rem 1.1rem; border-radius: 0.5rem; margin-right: 0.5rem; margin-bottom: 0.25rem;
+  cursor: pointer; font-weight: 600; border: 2px solid #4caf50;
+  transition: all 0.2s; background-color: white; color: #4caf50;
+  font-family: 'Inter', sans-serif; font-size: 0.875rem;
+}
+.toggle-btn:hover:not(.active):not(.filter-btn-disabled) { background-color: #f0faf0; }
+.toggle-btn.active { background: linear-gradient(135deg, #4caf50, #2e7d32); color: white; }
+.toggle-btn.filter-btn-disabled {
+  opacity: 0.38; cursor: not-allowed; border-color: #c8d8c0; color: #aab8a2;
+}
+/* download footer */
+.download-footer {
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
+  color: white; font-weight: 700; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 1px;
+}
+.app-badges { display: flex; gap: 2rem; }
+.download-footer img { height: 70px; width: auto; transition: transform 0.3s ease; cursor: pointer; border-radius: 0.5rem; }
+.download-footer img:hover { transform: scale(1.1) translateY(-4px); }
+footer { text-align: center; padding: 2rem; background: #f6f8f3; color: #64748b; font-weight: 500; }
+.leaflet-control-attribution { display: none !important; }
+@media (max-width: 768px) {
+  main { padding: 1.5rem 1rem 4rem; }
+  .hero-title { font-size: 1.7rem; }
+  header { padding: 1rem; font-size: 1.3rem; }
+  .hotel-cta { flex-direction: column; }
+  .hotel-cta-btn { width: 100%; text-align: center; }
+  .app-badges { flex-direction: column; gap: 1rem; align-items: center; }
+  .stat-strip { flex-wrap: wrap; }
+  .stat-strip-item { border-right: none; border-bottom: 1px solid #dde5d8; flex: 1 1 45%; }
+  .stat-strip-item:last-child { border-bottom: none; }
+}
+</style>`;
+}
+
+function breadcrumb(crumbs) {
+  // crumbs: [{label, href?}] — last item is current page (no href)
+  const home = `<a href="${BASE_LOCATIONS_URL}/">All Locations</a><span class="breadcrumb-sep">/</span>`;
+  const parts = crumbs.map((c, i) =>
+    i < crumbs.length - 1
+      ? `<a href="${c.href}">${c.label}</a><span class="breadcrumb-sep">/</span>`
+      : `<span>${c.label}</span>`
+  ).join('');
+  return `<div class="breadcrumb">${home}${parts}</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Stay22 modal — List View / Map View toggles matching generate-events.js
+// ---------------------------------------------------------------------------
+function stay22Modal() {
+  return `<div id="stay22-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;max-width:900px;width:96%;max-height:92vh;
+    overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.4);display:flex;flex-direction:column;">
+    <div style="padding:13px 16px 11px;border-bottom:1px solid rgba(0,0,0,0.08);
+      display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#fff;">
+      <div style="font-size:15px;font-weight:700;color:rgba(0,0,0,0.87)" id="stay22-modal-title">Find Hotels</div>
+      <button onclick="closeStay22()" style="background:rgba(0,0,0,0.07);border:none;border-radius:50%;
+        width:30px;height:30px;cursor:pointer;font-size:14px;display:flex;align-items:center;
+        justify-content:center;color:rgba(0,0,0,0.5);">&times;</button>
+    </div>
+    <div style="padding:10px 16px 6px;border-bottom:1px solid rgba(0,0,0,0.06);flex-shrink:0;background:#fff;">
+      <button class="toggle-btn active" id="btn-listview" onclick="switchStay22View('listview')">List View</button>
+      <button class="toggle-btn" id="btn-map" onclick="switchStay22View('map')">Map View</button>
+    </div>
+    <iframe id="stay22-iframe" style="flex:1;border:none;min-height:500px;"
+      title="Find hotels near parkrun events" src=""></iframe>
+  </div>
+</div>
+<script>
+var _s22Base = '';
+function openStay22(lat, lon, name) {
+  var d = new Date(), day = d.getDay(), diff = (5 - day + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  var checkin = d.toISOString().slice(0, 10);
+  _s22Base = 'https://www.stay22.com/embed/gm?aid=parkrunnertourist'
+    + '&lat=' + lat + '&lng=' + lon + '&maincolor=4caf50'
+    + '&venue=' + encodeURIComponent(name) + '&checkin=' + checkin;
+  document.getElementById('stay22-modal-title').textContent = 'Hotels near ' + name;
+  document.getElementById('btn-listview').classList.add('active');
+  document.getElementById('btn-map').classList.remove('active');
+  document.getElementById('stay22-iframe').src = _s22Base + '&viewmode=listview&listviewexpand=true';
+  var m = document.getElementById('stay22-modal');
+  m.style.display = 'flex';
+}
+function switchStay22View(mode) {
+  document.getElementById('btn-listview').classList.toggle('active', mode === 'listview');
+  document.getElementById('btn-map').classList.toggle('active', mode === 'map');
+  document.getElementById('stay22-iframe').src = _s22Base + '&viewmode=' + mode
+    + (mode === 'listview' ? '&listviewexpand=true' : '');
+}
+function closeStay22() {
+  document.getElementById('stay22-modal').style.display = 'none';
+  document.getElementById('stay22-iframe').src = '';
+  _s22Base = '';
+}
+document.getElementById('stay22-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeStay22();
 });
+</script>`;
+}
 
-let _previewMap = null;
+// ---------------------------------------------------------------------------
+// Search script
+// ---------------------------------------------------------------------------
+function searchScript(inputId, itemClass) {
+  return `<script>
+(function() {
+  var inp = document.getElementById('${inputId}');
+  if (!inp) return;
+  inp.addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    document.querySelectorAll('.${itemClass}').forEach(function(el) {
+      el.style.display = (!q || (el.dataset.search || el.textContent).toLowerCase().includes(q)) ? '' : 'none';
+    });
+  });
+})();
+</script>`;
+}
 
-function initCoursePreview() {
-  const el = document.getElementById('course-preview-map');
-  if (!el || _previewMap) return;
-  _previewMap = L.map('course-preview-map', {
+// ---------------------------------------------------------------------------
+// Event type filter — shown on all region/city pages that have event cards.
+//
+// State priority: URL param (?filter=5k|junior|all) > localStorage > default (5k).
+// URL param is written when the user clicks a filter button, and appended to
+// every city/region tile link so the preference carries through navigation.
+// localStorage key is global ('prt-event-filter') so it follows the user
+// across all location pages.
+// ---------------------------------------------------------------------------
+function filterScript(hasJunior, hasStandard, cityTileLinks) {
+  // Always render the filter when there are any events
+  const totalEvents = (hasJunior ? 1 : 0) + (hasStandard ? 1 : 0);
+  if (totalEvents === 0) return '';
+
+  // Build the city tile link injection — appends ?filter=VAL to each tile href
+  // so clicking through carries the current filter to the next page.
+  const tileSelector = cityTileLinks ? `'.tile'` : 'null';
+
+  return `<div class="filter-bar" id="event-filter-bar">
+  <span class="filter-label">Show:</span>
+  <button class="toggle-btn${hasStandard ? '' : ' filter-btn-disabled'}" id="filter-5k"
+    onclick="${hasStandard ? "setFilter('5k')" : ''}" title="${hasStandard ? '' : 'No 5k events here'}">5k Events</button>
+  <button class="toggle-btn${hasJunior ? '' : ' filter-btn-disabled'}" id="filter-junior"
+    onclick="${hasJunior ? "setFilter('junior')" : ''}" title="${hasJunior ? '' : 'No Junior events here'}">Junior Events</button>
+  <button class="toggle-btn" id="filter-all" onclick="setFilter('all')">All Events</button>
+</div>
+<script>
+(function() {
+  var GLOBAL_KEY = 'prt-event-filter';
+  var HAS_JUNIOR   = ${hasJunior};
+  var HAS_STANDARD = ${hasStandard};
+
+  // Read filter from URL param first, then localStorage, then default to 5k
+  function getInitialFilter() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var fromUrl = params.get('filter');
+      if (fromUrl && ['5k','junior','all'].indexOf(fromUrl) !== -1) {
+        // Validate: if the page doesn't have that type, fall back
+        if (fromUrl === '5k' && !HAS_STANDARD) fromUrl = HAS_JUNIOR ? 'junior' : 'all';
+        if (fromUrl === 'junior' && !HAS_JUNIOR) fromUrl = HAS_STANDARD ? '5k' : 'all';
+        localStorage.setItem(GLOBAL_KEY, fromUrl);
+        return fromUrl;
+      }
+    } catch(e) {}
+    try {
+      var saved = localStorage.getItem(GLOBAL_KEY) || '5k';
+      // Validate saved value against what this page has
+      if (saved === '5k' && !HAS_STANDARD) saved = HAS_JUNIOR ? 'junior' : 'all';
+      if (saved === 'junior' && !HAS_JUNIOR) saved = HAS_STANDARD ? '5k' : 'all';
+      return saved;
+    } catch(e) { return '5k'; }
+  }
+
+  function applyFilter(val) {
+    try { localStorage.setItem(GLOBAL_KEY, val); } catch(e) {}
+
+    // Update URL param without adding history entries
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set('filter', val);
+      history.replaceState(null, '', url.toString());
+    } catch(e) {}
+
+    // Update button states
+    var btn5k     = document.getElementById('filter-5k');
+    var btnJunior = document.getElementById('filter-junior');
+    var btnAll    = document.getElementById('filter-all');
+    if (btn5k)     btn5k.classList.toggle('active', val === '5k');
+    if (btnJunior) btnJunior.classList.toggle('active', val === 'junior');
+    if (btnAll)    btnAll.classList.toggle('active', val === 'all');
+
+    // Show/hide event cards
+    document.querySelectorAll('.event-card').forEach(function(card) {
+      var isJunior = card.dataset.junior === 'true';
+      var show = val === 'all'
+        || (val === '5k' && !isJunior)
+        || (val === 'junior' && isJunior);
+      card.style.display = show ? '' : 'none';
+    });
+
+    // Append ?filter=VAL to all tile (city/region) links on this page
+    // so clicking through carries the preference forward
+    document.querySelectorAll('.tile').forEach(function(tile) {
+      try {
+        var href = tile.getAttribute('href');
+        if (!href) return;
+        var u = new URL(href, window.location.href);
+        u.searchParams.set('filter', val);
+        tile.setAttribute('href', u.toString());
+      } catch(e) {}
+    });
+  }
+
+  window.setFilter = applyFilter;
+
+  // Wait for DOM to be ready so event cards exist before we filter them
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { applyFilter(getInitialFilter()); });
+  } else {
+    applyFilter(getInitialFilter());
+  }
+})();
+</script>`;
+}
+// ---------------------------------------------------------------------------
+// Event card with course preview mini-map
+// ---------------------------------------------------------------------------
+function eventCardHtml(ev) {
+  const { slug, longName, lat, lon, city, isJunior } = ev;
+  const subfolder  = getExploreSubfolder(slug);
+  const eventUrl   = `${BASE_EXPLORE_URL}/${subfolder}/${slug}`;
+  const seed       = eventSeed(ev.eventName);
+  const hasRoute   = ev.route && ev.route.length > 1;
+  const encRoute   = hasRoute ? encryptCoords(ev.route, seed) : null;
+  const mapId      = `cmap-${slug.replace(/[^a-z0-9]/g, '')}`;
+  const accent     = isJunior ? ACCENT_JR : ACCENT;
+  const cityLabel  = city ? `<span class="card-location"><i class="fas fa-map-marker-alt"></i> ${city}</span>` : '';
+  const typeBadge  = isJunior ? `<span class="card-badge junior">Junior parkrun</span>` : '';
+
+  // Build the Leaflet init script — same pattern as initCoursePreview in generate-events.js
+  const mapScript = `
+(function() {
+  ${decryptFnJs()}
+  var el = document.getElementById('${mapId}');
+  if (!el) return;
+  var map = L.map('${mapId}', {
     zoomControl: false, dragging: false, scrollWheelZoom: false,
     doubleClickZoom: false, boxZoom: false, keyboard: false,
     tap: false, touchZoom: false, attributionControl: false
   });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    maxZoom: 18
-  }).addTo(_previewMap);
-  const routeLatLngs = _courseRoute.map(p => [p[1], p[0]]);
-  L.polyline(routeLatLngs, {
-    color: '#28a745', weight: 3.5, opacity: 0.9, lineJoin: 'round', lineCap: 'round'
-  }).addTo(_previewMap);
-  const startPt = _courseStart || _courseRoute[0];
-  L.circleMarker([startPt[1], startPt[0]], {
-    radius: 7, fillColor: '#28a745', color: '#fff', weight: 2, fillOpacity: 1
-  }).addTo(_previewMap);
-  const finishPt = _courseFinish || _courseRoute[_courseRoute.length - 1];
-  L.circleMarker([finishPt[1], finishPt[0]], {
-    radius: 7, fillColor: '#dc3545', color: '#fff', weight: 2, fillOpacity: 1
-  }).addTo(_previewMap);
-  _previewMap.fitBounds(L.latLngBounds(routeLatLngs), { padding: [24, 24], animate: false });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  ${hasRoute ? `
+  var route = _d("${encRoute}", ${seed});
+  var lls = route.map(function(p) { return [p[1], p[0]]; });
+  L.polyline(lls, { color: '${accent}', weight: 3.5, opacity: 0.9, lineJoin: 'round', lineCap: 'round' }).addTo(map);
+  L.circleMarker(lls[0], { radius: 7, fillColor: '${accent}', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
+  L.circleMarker(lls[lls.length - 1], { radius: 7, fillColor: '#dc3545', color: '#fff', weight: 2, fillOpacity: 1 }).addTo(map);
+  map.fitBounds(L.latLngBounds(lls), { padding: [20, 20], animate: false });
+  ` : `
+  map.setView([${lat}, ${lon}], 14);
+  L.circleMarker([${lat}, ${lon}], { radius: 8, fillColor: '${accent}', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  `}
+})();`;
+
+  return `<div class="event-card" data-search="${longName.toLowerCase()} ${(city || '').toLowerCase()}" data-junior="${isJunior ? 'true' : 'false'}">
+  <div class="card-map-wrap">
+    <div id="${mapId}" class="card-map-inner"></div>
+    ${hasRoute ? `<div class="card-map-badges">
+      <span class="card-map-badge start">&#9679; Start</span>
+      <span class="card-map-badge finish">&#9679; Finish</span>
+    </div>` : ''}
+  </div>
+  <div class="card-body">
+    <div class="card-name">${longName}</div>
+    ${cityLabel}
+    <div class="card-badges">${typeBadge}</div>
+  </div>
+  <a href="${eventUrl}" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>${mapScript}</script>`;
 }
 
-const _courseUrl = ${courseUrl ? `"${courseUrl}"` : 'null'};
+// ---------------------------------------------------------------------------
+// Page generators
+// ---------------------------------------------------------------------------
 
-function openCourseChoice() {
-  document.body.classList.add('modal-open');
-  document.getElementById('course-choice-modal').style.display = 'flex';
-}
-function closeCourseChoice() {
-  document.getElementById('course-choice-modal').style.display = 'none';
-  document.body.classList.remove('modal-open');
-}
-document.getElementById('course-choice-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeCourseChoice();
-});
-function openStandardMap() {
-  if (!_courseUrl) return;
-  document.body.classList.add('modal-open');
-  document.getElementById('standard-map-iframe').src = _courseUrl;
-  document.getElementById('standard-map-modal').style.display = 'flex';
-}
-function closeStandardMap() {
-  document.getElementById('standard-map-modal').style.display = 'none';
-  document.getElementById('standard-map-iframe').src = '';
-  document.body.classList.remove('modal-open');
-}
-function openContactModal() {
-  document.getElementById('contact-modal').style.display = 'flex';
-  document.body.classList.add('modal-open');
-}
-function closeContactModal() {
-  document.getElementById('contact-modal').style.display = 'none';
-  document.body.classList.remove('modal-open');
-}
-document.getElementById('contact-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeContactModal();
-});
-document.getElementById('standard-map-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeStandardMap();
-});
+function generateWorldIndex(countries) {
+  const sorted = Object.entries(countries).sort((a, b) => b[1].totalEvents - a[1].totalEvents);
+  const totalEvents    = sorted.reduce((s, [, d]) => s + d.totalEvents, 0);
+  const totalCountries = sorted.length;
+  const totalCities    = sorted.reduce((s, [, d]) => s + d.cities.length, 0);
 
-function openCourseModal() {
-  document.body.classList.add('modal-open');
-  if (!HAS_ROUTE) return;
-  if (courseAnimFrameId) cancelAnimationFrame(courseAnimFrameId);
-  courseAnimRunning = false;
-  document.getElementById('course-map-modal').classList.add('show');
-  const displayName = '${name}';
-  document.getElementById('course-modal-title').textContent =
-    displayName.charAt(0).toUpperCase() + displayName.slice(1) + ' parkrun';
-  const maxKm = displayName.toLowerCase().includes('junior') ? 2.0 : 5.0;
-  const [route, dists] = trimRouteToDistance(_courseRoute, maxKm);
-  _trimmedRoute = route; courseDistances = dists;
-  initProgressBarDrag();
-  setTimeout(() => {
-    initCourseModalMap(route);
-    buildElevationChart(route, dists, null);
-    fetchElevation(route).then(elevs => {
-      if (elevs && elevs.length === route.length) {
-        courseElevationData = elevs; buildElevationChart(route, dists, elevs);
-      }
+  const cards = sorted.map(([cSlug, d]) => {
+    const flag = isoToFlag(d.iso2 || '');
+    return `
+<a href="${BASE_LOCATIONS_URL}/${cSlug}/" class="country-card">
+  <div class="country-card-flag">${flag}</div>
+  <div class="country-card-body">
+    <h3>${d.name}</h3>
+    <p>${d.totalEvents.toLocaleString()} event${d.totalEvents !== 1 ? 's' : ''} &middot; ${d.cities.length} town${d.cities.length !== 1 ? 's' : ''} &amp; cities</p>
+  </div>
+  <i class="fas fa-chevron-right country-card-arrow"></i>
+</a>`;
+  }).join('');
+
+  return `${htmlHead({
+    title: 'Find parkrun Events Near You — Hotels, Course Maps &amp; Visitor Guides | parkrunner tourist',
+    description: 'Planning a parkrun holiday or visiting somewhere new? Find parkrun events near your destination by country and city. Compare hotels, view course maps and plan your perfect parkrun trip.',
+    canonicalUrl: `${BASE_LOCATIONS_URL}/`,
+    breadcrumbItems: [],
+  })}
+<body>
+${sharedStyles()}
+${htmlHeader()}
+<main>
+  <div class="hero">
+    <div class="hero-eyebrow">parkrunner tourist</div>
+    <h1 class="hero-title">Find parkruns Near Your Destination</h1>
+    <p class="hero-sub">Going on holiday or visiting somewhere new? Browse parkrun events by country and town — then find hotels nearby, check the course map and plan your parkrun trip.</p>
+  </div>
+  <div class="stat-strip">
+    <div class="stat-strip-item"><span class="stat-strip-value">${totalEvents.toLocaleString()}</span><span class="stat-strip-label">Events worldwide</span></div>
+    <div class="stat-strip-item"><span class="stat-strip-value">${totalCountries}</span><span class="stat-strip-label">Countries</span></div>
+    <div class="stat-strip-item"><span class="stat-strip-value">${totalCities}</span><span class="stat-strip-label">Towns &amp; cities</span></div>
+  </div>
+  <div class="section-heading">Select a country</div>
+  <div class="country-grid">${cards}</div>
+</main>
+${htmlFooter()}
+</body></html>`;
+}
+
+function generateCountryPage(countrySlug, countryData) {
+  const { name, cities, totalEvents, iso2 } = countryData;
+  const allEvents    = cities.flatMap(c => c.events);
+  const c            = centroid(allEvents);
+  const showSearch   = cities.length >= SEARCH_THRESHOLD;
+  const flag         = isoToFlag(iso2 || '');
+  const juniorCount  = allEvents.filter(e => e.isJunior).length;
+  const standardCount = totalEvents - juniorCount;
+
+  const tiles = cities
+    .sort((a, b) => b.events.length - a.events.length)
+    .map(city => `
+<a href="${BASE_LOCATIONS_URL}/${countrySlug}/${city.slug}/" class="tile" data-search="${city.name.toLowerCase()}">
+  <span class="tile-name">${city.name}</span>
+  <span class="tile-count">${city.events.length}</span>
+</a>`).join('');
+
+  return `${htmlHead({
+    title: `Find parkruns in ${name} — Hotels, Course Maps &amp; Visitor Guides`,
+    description: `Looking for parkrun events in ${name}? Browse every town and city, view course maps, find hotels near each event and plan your parkrun trip to ${name}.`,
+    canonicalUrl: `${BASE_LOCATIONS_URL}/${countrySlug}/`,
+    lat: c.lat, lon: c.lon, locationName: name,
+    breadcrumbItems: [{ name, url: `${BASE_LOCATIONS_URL}/${countrySlug}/` }],
+  })}
+<body>
+${sharedStyles()}
+${htmlHeader()}
+${breadcrumb([{ label: name }])}
+<main>
+  <div class="hero">
+    <div class="hero-eyebrow">${flag} ${name}</div>
+    <h1 class="hero-title">Find parkruns in ${name}</h1>
+    <p class="hero-sub">${totalEvents} parkrun event${totalEvents !== 1 ? 's' : ''} across ${cities.length} town${cities.length !== 1 ? 's' : ''} &amp; cit${cities.length !== 1 ? 'ies' : 'y'} — pick a location to see course maps and nearby hotels</p>
+  </div>
+  <div class="stat-strip">
+    <div class="stat-strip-item"><span class="stat-strip-value">${standardCount.toLocaleString()}</span><span class="stat-strip-label">5k events</span></div>
+    ${juniorCount > 0 ? `<div class="stat-strip-item"><span class="stat-strip-value">${juniorCount}</span><span class="stat-strip-label">Junior events</span></div>` : ''}
+    <div class="stat-strip-item"><span class="stat-strip-value">${cities.length}</span><span class="stat-strip-label">Towns &amp; cities</span></div>
+  </div>
+  ${showSearch ? `<div class="search-wrap"><i class="fas fa-search search-icon"></i><input id="loc-search" class="search-input" type="text" placeholder="Search towns &amp; cities in ${name}..." /></div>` : ''}
+  <div class="section-heading">Towns &amp; Cities</div>
+  <div class="tile-grid">${tiles}</div>
+</main>
+${htmlFooter()}
+${stay22Modal()}
+${showSearch ? searchScript('loc-search', 'tile') : ''}
+<script>
+(function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var f = params.get('filter') || localStorage.getItem('prt-event-filter') || '5k';
+    document.querySelectorAll('.tile').forEach(function(tile) {
+      try {
+        var href = tile.getAttribute('href');
+        if (!href) return;
+        var u = new URL(href, window.location.href);
+        u.searchParams.set('filter', f);
+        tile.setAttribute('href', u.toString());
+      } catch(e) {}
     });
-    setTimeout(() => { syncCanvasSize(); updateCourseFrame(0); setTimeout(restartCourseAnimation, 50); }, 300);
-  }, 80);
-}
-function closeCourseModal() {
-  document.body.classList.remove('modal-open');
-  document.getElementById('course-map-modal').classList.remove('show');
-  if (courseAnimFrameId) cancelAnimationFrame(courseAnimFrameId);
-  courseAnimRunning = false;
-}
-document.getElementById('course-map-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeCourseModal();
-});
-
-let courseModalMap = null;
-let courseModalStartMark = null;
-let courseModalFinishMark = null;
-const COURSE_ANIM_DURATION = 30;
-let courseAnimStartTime = null;
-let courseAnimElapsedAtPause = 0;
-let courseAnimRunning = false;
-let courseAnimFrameId = null;
-let courseAnimCanvas = null;
-let courseAnimCtx = null;
-let courseElevationChart = null;
-let courseElevationData = [];
-let courseDistances = [];
-let _courseFitZoom = null;
-let _trimmedRoute = null;
-
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-function trimRouteToDistance(route, maxKm) {
-  const dists = [0]; const trimmed = [route[0]];
-  for (let i = 1; i < route.length; i++) {
-    const d = dists[i-1] + haversine(route[i-1][1], route[i-1][0], route[i][1], route[i][0]);
-    if (d >= maxKm) {
-      const prev = route[i-1], cur = route[i], frac = (maxKm - dists[i-1]) / (d - dists[i-1]);
-      trimmed.push([prev[0] + (cur[0]-prev[0])*frac, prev[1] + (cur[1]-prev[1])*frac]);
-      dists.push(maxKm); break;
-    }
-    trimmed.push(route[i]); dists.push(d);
-  }
-  return [trimmed, dists];
-}
-function fetchElevation(route) {
-  return fetch('https://api.open-elevation.com/api/v1/lookup', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ locations: route.map(c => ({ latitude: c[1], longitude: c[0] })) })
-  }).then(r => r.json()).then(d => d.results.map(r => r.elevation)).catch(() => null);
-}
-function syncCanvasSize() {
-  const wrap = document.getElementById('course-map-wrap');
-  const canvas = document.getElementById('course-animation-canvas');
-  if (!wrap || !canvas) return;
-  const w = wrap.offsetWidth, h = wrap.offsetHeight;
-  if (w <= 0 || h <= 0) return;
-  const dpr = window.devicePixelRatio || 1;
-  const pw = Math.round(w*dpr), ph = Math.round(h*dpr);
-  if (canvas.width !== pw || canvas.height !== ph) {
-    canvas.width = pw; canvas.height = ph;
-    canvas.style.width = w+'px'; canvas.style.height = h+'px';
-  }
-  courseAnimCanvas = canvas; courseAnimCtx = canvas.getContext('2d');
-}
-function initCourseModalMap(route) {
-  if (!courseModalMap) {
-    courseModalMap = L.map('course-modal-map', {
-      zoomControl: true, dragging: true, scrollWheelZoom: true,
-      doubleClickZoom: true, boxZoom: false, keyboard: false,
-      tap: false, touchZoom: true, attributionControl: false
-    });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(courseModalMap);
-    courseModalMap.on('move zoom', _drawFrame);
-    courseModalMap.on('moveend zoomend', function() { _drawFrame(); _enforceMinZoom(); });
-  }
-  if (courseModalStartMark)  courseModalMap.removeLayer(courseModalStartMark);
-  if (courseModalFinishMark) courseModalMap.removeLayer(courseModalFinishMark);
-  if (_courseStart) {
-    courseModalStartMark = L.circleMarker([_courseStart[1], _courseStart[0]],
-      { radius: 10, fillOpacity: 0, opacity: 0, interactive: true }).addTo(courseModalMap);
-    courseModalStartMark.bindTooltip('Start', { permanent: false, direction: 'top' });
-    courseModalStartMark._lo = false;
-    courseModalStartMark.on('click', function() { this._lo ? this.closeTooltip() : this.openTooltip(); this._lo = !this._lo; });
-  }
-  if (_courseFinish) {
-    courseModalFinishMark = L.circleMarker([_courseFinish[1], _courseFinish[0]],
-      { radius: 10, fillOpacity: 0, opacity: 0, interactive: true }).addTo(courseModalMap);
-    courseModalFinishMark.bindTooltip('Finish', { permanent: false, direction: 'top' });
-    courseModalFinishMark._lo = false;
-    courseModalFinishMark.on('click', function() { this._lo ? this.closeTooltip() : this.openTooltip(); this._lo = !this._lo; });
-  }
-  courseModalMap.invalidateSize({ animate: false });
-  const bounds = L.latLngBounds(route.map(p => [p[1], p[0]]));
-  courseModalMap.fitBounds(bounds, { padding: [55, 55], animate: false });
-  _courseFitZoom = courseModalMap.getZoom();
-  syncCanvasSize();
-}
-function _drawFrame() {
-  if (courseAnimRunning) return;
-  const pct = parseFloat(document.getElementById('course-progress-fill').style.width || '0') / 100;
-  syncCanvasSize(); updateCourseFrame(pct, true);
-}
-function _enforceMinZoom() {
-  if (_courseFitZoom && courseModalMap && courseModalMap.getZoom() < _courseFitZoom)
-    courseModalMap.setZoom(_courseFitZoom, { animate: true });
-}
-function getInterpolatedPoint(route, progress) {
-  const totalPts = route.length - 1;
-  const fi = Math.min(progress * totalPts, totalPts);
-  const fullIdx = Math.min(Math.floor(fi), route.length - 2);
-  const frac = fi - fullIdx;
-  const p1 = route[fullIdx], p2 = route[Math.min(fullIdx+1, route.length-1)];
-  return { lat: p1[1]+(p2[1]-p1[1])*frac, lon: p1[0]+(p2[0]-p1[0])*frac, idx: fullIdx };
-}
-function updateCourseFrame(progress) {
-  if (!courseModalMap) return;
-  syncCanvasSize();
-  const canvas = courseAnimCanvas, ctx = courseAnimCtx;
-  if (!canvas || !ctx) return;
-  const dpr = window.devicePixelRatio || 1;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.save(); ctx.scale(dpr, dpr);
-  const route = _trimmedRoute || _courseRoute;
-  if (!route) { ctx.restore(); return; }
-  function toXY(lat, lon) {
-    const p = courseModalMap.latLngToContainerPoint(L.latLng(lat, lon));
-    return [p.x, p.y];
-  }
-  ctx.beginPath(); ctx.setLineDash([7,5]); ctx.lineWidth = 3;
-  ctx.strokeStyle = 'rgba(150,150,150,0.5)'; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  for (let i = 0; i < route.length; i++) {
-    const [x,y] = toXY(route[i][1], route[i][0]);
-    i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-  }
-  ctx.stroke(); ctx.setLineDash([]);
-  const totalPts = route.length - 1;
-  const fi = progress * totalPts;
-  const fullIdx = Math.min(Math.floor(fi), route.length - 2);
-  const frac = fi - fullIdx;
-  const startLL  = _courseStart;
-  const finishLL = _courseFinish;
-  const [sx,sy]  = startLL  ? toXY(startLL[1],  startLL[0])  : toXY(route[0][1], route[0][0]);
-  const [fx,fy]  = finishLL ? toXY(finishLL[1], finishLL[0]) : toXY(route[route.length-1][1], route[route.length-1][0]);
-  if (progress > 0) {
-    ctx.beginPath(); ctx.lineWidth = 5; ctx.strokeStyle = '#28a745';
-    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    const [x0,y0] = toXY(route[0][1], route[0][0]);
-    ctx.moveTo(x0, y0);
-    for (let i = 1; i <= Math.min(fullIdx, route.length-2); i++) {
-      const [x,y] = toXY(route[i][1], route[i][0]);
-      ctx.lineTo(x,y);
-    }
-    if (fullIdx < route.length-1) {
-      const [x1,y1] = toXY(route[fullIdx][1],   route[fullIdx][0]);
-      const [x2,y2] = toXY(route[fullIdx+1][1], route[fullIdx+1][0]);
-      ctx.lineTo(x1+(x2-x1)*frac, y1+(y2-y1)*frac);
-    }
-    ctx.stroke();
-  }
-  ctx.beginPath(); ctx.arc(fx,fy,8,0,Math.PI*2);
-  ctx.fillStyle='#dc3545'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
-  ctx.beginPath(); ctx.arc(sx,sy,8,0,Math.PI*2);
-  ctx.fillStyle='#28a745'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
-  const {lat,lon} = getInterpolatedPoint(route, progress);
-  const [dx,dy] = toXY(lat,lon);
-  const grd = ctx.createRadialGradient(dx,dy,3,dx,dy,18);
-  grd.addColorStop(0,'rgba(255,193,7,0.55)'); grd.addColorStop(1,'rgba(255,193,7,0)');
-  ctx.beginPath(); ctx.arc(dx,dy,18,0,Math.PI*2); ctx.fillStyle=grd; ctx.fill();
-  ctx.beginPath(); ctx.arc(dx,dy,8,0,Math.PI*2);
-  ctx.fillStyle='#ffc107'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
-  ctx.restore();
-  document.getElementById('course-progress-fill').style.width = (progress*100) + '%';
-  const tot = COURSE_ANIM_DURATION;
-  const cur = progress * tot;
-  const fmt = s => Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
-  document.getElementById('course-time-label').textContent = fmt(cur) + ' / ' + fmt(tot);
-  updateElevationCursor(progress);
-}
-function runCourseAnimation(ts) {
-  if (!courseAnimRunning) return;
-  if (!courseAnimStartTime) courseAnimStartTime = ts;
-  const elapsed = (ts - courseAnimStartTime)/1000 + courseAnimElapsedAtPause;
-  const progress = Math.min(elapsed / COURSE_ANIM_DURATION, 1);
-  updateCourseFrame(progress);
-  if (progress >= 1) {
-    courseAnimRunning = false; courseAnimElapsedAtPause = COURSE_ANIM_DURATION;
-    document.getElementById('course-play-btn').innerHTML = '<i class="fas fa-redo"></i>'; return;
-  }
-  courseAnimFrameId = requestAnimationFrame(runCourseAnimation);
-}
-function restartCourseAnimation() {
-  if (courseAnimFrameId) cancelAnimationFrame(courseAnimFrameId);
-  courseAnimStartTime = null; courseAnimElapsedAtPause = 0; courseAnimRunning = true;
-  document.getElementById('course-play-btn').innerHTML = '<i class="fas fa-pause"></i>';
-  courseAnimFrameId = requestAnimationFrame(runCourseAnimation);
-}
-function toggleCourseAnimation() {
-  if (courseAnimElapsedAtPause >= COURSE_ANIM_DURATION) { restartCourseAnimation(); return; }
-  courseAnimRunning = !courseAnimRunning;
-  const btn = document.getElementById('course-play-btn');
-  if (courseAnimRunning) {
-    btn.innerHTML = '<i class="fas fa-pause"></i>';
-    courseAnimStartTime = null; courseAnimFrameId = requestAnimationFrame(runCourseAnimation);
-  } else {
-    btn.innerHTML = '<i class="fas fa-play"></i>';
-    courseAnimElapsedAtPause = parseFloat(document.getElementById('course-progress-fill').style.width||'0')/100*COURSE_ANIM_DURATION;
-    if (courseAnimFrameId) cancelAnimationFrame(courseAnimFrameId);
-  }
-}
-function seekToProgress(pct) {
-  if (courseAnimFrameId) cancelAnimationFrame(courseAnimFrameId);
-  courseAnimElapsedAtPause = pct * COURSE_ANIM_DURATION; courseAnimStartTime = null;
-  updateCourseFrame(pct);
-  if (courseAnimRunning) courseAnimFrameId = requestAnimationFrame(runCourseAnimation);
-}
-function initProgressBarDrag() {
-  const wrap = document.getElementById('course-progress-wrap');
-  const nw = wrap.cloneNode(true); wrap.parentNode.replaceChild(nw, wrap);
-  function getPct(e) {
-    const rect = nw.getBoundingClientRect();
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    return Math.max(0, Math.min(1, (cx - rect.left) / rect.width));
-  }
-  nw.addEventListener('mousedown', e => {
-    e.preventDefault(); nw.classList.add('dragging');
-    const was = courseAnimRunning; courseAnimRunning = false;
-    if (courseAnimFrameId) cancelAnimationFrame(courseAnimFrameId);
-    const mv = e => seekToProgress(getPct(e));
-    const up = () => {
-      nw.classList.remove('dragging');
-      document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
-      courseAnimRunning = was;
-      if (was) { courseAnimStartTime = null; courseAnimFrameId = requestAnimationFrame(runCourseAnimation); }
-    };
-    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
-    seekToProgress(getPct(e));
-  });
-  nw.addEventListener('touchstart', e => {
-    e.preventDefault(); nw.classList.add('dragging');
-    const was = courseAnimRunning; courseAnimRunning = false;
-    if (courseAnimFrameId) cancelAnimationFrame(courseAnimFrameId);
-    const mv = e => seekToProgress(getPct(e));
-    const en = () => {
-      nw.classList.remove('dragging');
-      document.removeEventListener('touchmove', mv); document.removeEventListener('touchend', en);
-      courseAnimRunning = was;
-      if (was) { courseAnimStartTime = null; courseAnimFrameId = requestAnimationFrame(runCourseAnimation); }
-    };
-    document.addEventListener('touchmove', mv, { passive: false });
-    document.addEventListener('touchend', en);
-    seekToProgress(getPct(e));
-  }, { passive: false });
-}
-function buildElevationChart(route, dists, elevs) {
-  document.getElementById('elevation-chart-container').style.display = 'block';
-  let elData;
-  if (elevs && elevs.length === route.length) {
-    elData = elevs;
-  } else {
-    elData = []; let e = 40 + Math.random()*30;
-    for (let i = 0; i < route.length; i++) {
-      e += (Math.random()-0.48)*3.5; e = Math.max(5, Math.min(300, e));
-      elData.push(Math.round(e*10)/10);
-    }
-  }
-  courseElevationData = elData;
-  const labels = dists.map(d => d.toFixed(2));
-  const minEl = Math.min(...elData), maxEl = Math.max(...elData);
-  const yPad = Math.max(maxEl - minEl, 5) * 0.3;
-  if (courseElevationChart) courseElevationChart.destroy();
-  const ctx = document.getElementById('elevation-chart').getContext('2d');
-  courseElevationChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets: [
-      { label: 'Elevation (m)', data: elData, fill: true,
-        backgroundColor: 'rgba(40,167,69,0.12)', borderColor: '#28a745',
-        borderWidth: 2, pointRadius: 0, tension: 0.4 },
-      { label: 'Current', data: elData.map((v,i) => i===0?v:null),
-        fill: false, borderColor: 'transparent',
-        pointRadius: elData.map((v,i) => i===0?7:0),
-        pointBackgroundColor: '#ffc107', pointBorderColor: 'white',
-        pointBorderWidth: 2.5, tension: 0 }
-    ]},
-    options: {
-      responsive: true, animation: false,
-      plugins: { legend: { display: false },
-        tooltip: { mode: 'index', intersect: false,
-          callbacks: { title: items => items[0].label+' km', label: item => item.datasetIndex===0?item.raw.toFixed(1)+' m':null },
-          filter: item => item.datasetIndex === 0 }},
-      scales: {
-        x: { ticks: { maxTicksLimit: 5, callback: (v,i) => labels[i]+' km' }, grid: { display: false } },
-        y: { min: Math.floor(minEl-yPad), max: Math.ceil(maxEl+yPad),
-             ticks: { callback: v => v+'m', maxTicksLimit: 5 }, grid: { color: 'rgba(0,0,0,0.05)' } }
-      },
-      onClick: e => {
-        const ca = courseElevationChart.chartArea;
-        const rect = document.getElementById('elevation-chart').getBoundingClientRect();
-        const pct = Math.max(0, Math.min(1, (e.native.clientX - rect.left - ca.left) / (ca.right - ca.left)));
-        seekToProgress(pct);
-      }
-    }
-  });
-}
-function updateElevationCursor(progress) {
-  if (!courseElevationChart || !courseElevationData.length) return;
-  const n = courseElevationData.length;
-  const idx = Math.min(Math.round(progress*(n-1)), n-1);
-  courseElevationChart.data.datasets[1].data = courseElevationData.map((v,i) => i===idx?v:null);
-  courseElevationChart.data.datasets[1].pointRadius = courseElevationData.map((v,i) => i===idx?7:0);
-  courseElevationChart.update('none');
-}
+  } catch(e) {}
+})();
 </script>
-</body>
-</html>`;
+</body></html>`;
 }
 
-// ============================================================
-// MAIN
-// ============================================================
-function ensureDirectoryExists(dirPath) {
-  if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
+// City page — shows all events in a town/city directly (no region middle tier)
+// URL: /locations/[country-slug]/[city-slug]/
+function generateCityPage(countrySlug, countryName, citySlug, cityData) {
+  const { name: cityName, events, centreLat, centreLon } = cityData;
+  const eventCentroid = centroid(events);
+  // Prefer the geocoded city centre; fall back to event centroid if not available
+  const geoLat = centreLat !== null ? centreLat : eventCentroid.lat;
+  const geoLon = centreLon !== null ? centreLon : eventCentroid.lon;
+  const showSearch    = events.length >= SEARCH_THRESHOLD;
+  const juniorCount   = events.filter(e => e.isJunior).length;
+  const standardCount = events.length - juniorCount;
+
+  const cards = events
+    .sort((a, b) => a.longName.localeCompare(b.longName))
+    .map(ev => eventCardHtml(ev)).join('\n');
+
+  return `${htmlHead({
+    title: `Find parkruns in ${cityName} — Hotels Near Each Event &amp; Course Maps`,
+    description: `Planning a visit to ${cityName}? Find ${events.length} parkrun event${events.length !== 1 ? 's' : ''} in ${cityName}, ${countryName} — view course maps, compare hotels nearby and plan your perfect parkrun trip.`,
+    canonicalUrl: `${BASE_LOCATIONS_URL}/${countrySlug}/${citySlug}/`,
+    lat: geoLat, lon: geoLon, locationName: `${cityName}, ${countryName}`,
+    breadcrumbItems: [
+      { name: countryName, url: `${BASE_LOCATIONS_URL}/${countrySlug}/` },
+      { name: cityName,    url: `${BASE_LOCATIONS_URL}/${countrySlug}/${citySlug}/` },
+    ],
+  })}
+<body>
+${sharedStyles()}
+${htmlHeader()}
+${breadcrumb([
+    { label: countryName, href: `${BASE_LOCATIONS_URL}/${countrySlug}/` },
+    { label: cityName },
+  ])}
+<main>
+  <div class="hero">
+    <div class="hero-eyebrow">${countryName}</div>
+    <h1 class="hero-title">Find parkruns in ${cityName}</h1>
+    <p class="hero-sub">${events.length} parkrun event${events.length !== 1 ? 's' : ''} in ${cityName} — view course maps and find hotels nearby</p>
+  </div>
+  <div class="stat-strip">
+    <div class="stat-strip-item"><span class="stat-strip-value">${standardCount.toLocaleString()}</span><span class="stat-strip-label">5k events</span></div>
+    ${juniorCount > 0 ? `<div class="stat-strip-item"><span class="stat-strip-value">${juniorCount}</span><span class="stat-strip-label">Junior events</span></div>` : ''}
+  </div>
+  <div class="hotel-cta">
+    <div class="hotel-cta-text">
+      <h2>Staying in ${cityName}?</h2>
+      <p>Find hotels and rentals near your parkrun event.</p>
+    </div>
+    <button class="hotel-cta-btn" onclick="openStay22(${geoLat},${geoLon},'${cityName.replace(/'/g, "\\'")} parkrun')">Find Hotels</button>
+  </div>
+  ${showSearch ? `<div class="search-wrap"><i class="fas fa-search search-icon"></i><input id="evt-search" class="search-input" type="text" placeholder="Search events in ${cityName}..." /></div>` : ''}
+  ${filterScript(juniorCount > 0, standardCount > 0, true)}
+  <div class="section-heading">Events in ${cityName}</div>
+  <div class="event-grid">${cards}</div>
+</main>
+${htmlFooter()}
+${stay22Modal()}
+${showSearch ? searchScript('evt-search', 'event-card') : ''}
+</body></html>`;
 }
 
-function cleanupOldStructure() {
-  try {
-    if (fs.existsSync(OUTPUT_DIR))
-      for (const item of fs.readdirSync(OUTPUT_DIR)) {
-        const p = path.join(OUTPUT_DIR, item);
-        if (fs.statSync(p).isFile() && item.endsWith('.html')) fs.unlinkSync(p);
-      }
-  } catch (e) { console.warn('Cleanup warning:', e.message); }
-}
+// ---------------------------------------------------------------------------
+// Sitemap generator
+// Writes /locations/sitemap.xml listing every location page.
+// Priority: world index 1.0, country 0.9, region 0.8, city 0.7
+// changefreq: weekly (event count can change as new events open)
+// ---------------------------------------------------------------------------
+function generateSitemap(hierarchy) {
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = [];
 
-function cleanupRemovedEvents(validSlugs) {
-  for (const folder of fs.readdirSync(OUTPUT_DIR)) {
-    const folderPath = path.join(OUTPUT_DIR, folder);
-    if (fs.statSync(folderPath).isDirectory()) {
-      for (const file of fs.readdirSync(folderPath)) {
-        if (file.endsWith('.html')) {
-          const slug = path.basename(file, '.html');
-          if (!validSlugs.has(slug)) { fs.unlinkSync(path.join(folderPath, file)); console.log('Deleted:', folder+'/'+file); }
-        }
-      }
+  urls.push({ loc: `${BASE_LOCATIONS_URL}/`, priority: '0.9' });
+
+  for (const [countrySlug, countryData] of Object.entries(hierarchy)) {
+    urls.push({ loc: `${BASE_LOCATIONS_URL}/${countrySlug}/`, priority: '0.8' });
+    for (const [citySlug] of Object.entries(countryData.cities)) {
+      urls.push({ loc: `${BASE_LOCATIONS_URL}/${countrySlug}/${citySlug}/`, priority: '0.8' });
     }
   }
+
+  const entries = urls.map(u => `  <url>
+    <loc>${u.loc}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries}
+</urlset>`;
 }
 
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 async function main() {
+  console.log('Fetching events JSON...');
+  const data = await fetchJson(EVENTS_URL);
+  let events;
+  if (Array.isArray(data)) events = data;
+  else if (Array.isArray(data.features)) events = data.features;
+  else if (data.events && Array.isArray(data.events.features)) events = data.events.features;
+  else throw new Error('Unexpected JSON structure');
+
+  console.log('Fetching course maps...');
+  let courseMaps = {};
   try {
-    console.log('Fetching events JSON...');
-    const data = await fetchJson(EVENTS_URL);
-    let events;
-    if (Array.isArray(data)) events = data;
-    else if (Array.isArray(data.features)) events = data.features;
-    else if (data.events && Array.isArray(data.events.features)) events = data.events.features;
-    else throw new Error('Unexpected JSON structure');
+    courseMaps = await fetchJson(COURSE_MAPS_URL);
+    console.log(`Loaded ${Object.keys(courseMaps).length} course map entries.`);
+  } catch (e) { console.warn('Could not load course maps:', e.message); }
 
-    console.log('Fetching course maps...');
-    let courseMaps = {};
-    try {
-      courseMaps = await fetchJson(COURSE_MAPS_URL);
-      const keys = Object.keys(courseMaps);
-      console.log(`Loaded ${keys.length} course map entries.`);
-      if (keys.length > 0) console.log(`Sample key: "${keys[0]}" — value keys: ${Object.keys(courseMaps[keys[0]]).join(', ')}`);
-    } catch (e) { console.warn('Could not load course maps:', e.message); }
+  const limited = EVENT_LIMIT > 0 ? events.slice(0, EVENT_LIMIT) : events;
+  console.log(`Processing ${limited.length} events...`);
 
-    let folderMapping = {};
-    try { folderMapping = JSON.parse(fs.readFileSync(path.join(__dirname, '../folder-mapping.json'), 'utf-8')); }
-    catch (e) { console.warn('No folder mapping, using dynamic.'); }
+  // Build minimal list for geocoding pass
+  const rawEvents = limited.map(ev => {
+    const props  = ev.properties || {};
+    const coords = (ev.geometry && ev.geometry.coordinates) || [0, 0];
+    return {
+      eventName:   props.eventname || '',
+      longName:    props.EventLongName || props.eventname || '',
+      slug:        slugify(props.eventname || ''),
+      countryCode: String(props.countrycode || '0'),
+      lat:         coords[1] || 0,
+      lon:         coords[0] || 0,
+    };
+  });
 
-    const allEventsInfoComplete = events.map(ev => ({
-      slug: slugify(ev.properties.eventname),
-      lat: ev.geometry.coordinates[1] || 0,
-      lon: ev.geometry.coordinates[0] || 0,
-      longName: ev.properties.EventLongName || ev.properties.eventname,
-      country: ev.properties.countrycode
-    }));
+  // Resolve coordinates via Nominatim (cache-first)
+  const cache = loadCache();
+  await geocodeAllEvents(rawEvents, cache);
 
-    const selectedEvents = events.slice(0, MAX_EVENTS);
-    selectedEvents.sort((a, b) =>
-      (a.properties.eventname || '').toLowerCase().localeCompare((b.properties.eventname || '').toLowerCase())
+  // Enrich with geocoded admin data + course routes
+  const enriched = rawEvents.map(ev => {
+    const address = cacheAddress(cache, cacheKey(ev.lat, ev.lon));
+    const { city, region, cityLat, cityLon } = extractFromAddress(address, ev.countryCode);
+    const isJunior = ev.longName.toLowerCase().includes('junior');
+
+    const courseKey = Object.keys(courseMaps).find(k =>
+      k === ev.eventName ||
+      k === ev.eventName.toLowerCase() ||
+      k === ev.slug ||
+      k.replace(/-/g, '').toLowerCase() === ev.eventName.replace(/\s+/g, '').toLowerCase()
     );
+    const courseData = courseKey ? courseMaps[courseKey] : null;
+    const route = (courseData && Array.isArray(courseData.route) && courseData.route.length > 1)
+      ? courseData.route : null;
 
-    const limitedEvents = EVENT_LIMIT > 0 ? selectedEvents.slice(0, EVENT_LIMIT) : selectedEvents;
-    if (EVENT_LIMIT > 0) console.log(`Limit set — generating up to ${EVENT_LIMIT} HTML pages.`);
-    console.log(`Processing ${limitedEvents.length} events...`);
+    return { ...ev, isJunior, city, region, cityLat, cityLon, route };
+  });
 
-    const folderCounts = {};
-    ensureDirectoryExists(OUTPUT_DIR);
-    cleanupOldStructure();
-    cleanupRemovedEvents(new Set(limitedEvents.map(e => slugify(e.properties.eventname))));
+  // Build 2-tier hierarchy: country → town/city
+  // URL structure: /locations/[country-slug]/[city-slug]/
+  const hierarchy = {};
+  for (const ev of enriched) {
+    const meta        = COUNTRY_META[ev.countryCode] || { name: 'Unknown', iso2: '' };
+    const countrySlug = slugify(meta.name);
+    const cityName    = ev.city || meta.name;
+    const citySlug    = slugify(cityName);
 
-    const slugToSubfolder = {};
-    for (const event of limitedEvents) {
-      const slug = slugify(event.properties.eventname);
-      let sub = folderMapping[slug] || getSubfolder(slug);
-      if (!folderCounts[sub]) folderCounts[sub] = 0;
-      if (folderCounts[sub] >= MAX_FILES_PER_FOLDER) {
-        let sfx = 2;
-        while (true) {
-          const c = `${sub}${sfx}`; if (!folderCounts[c]) folderCounts[c] = 0;
-          if (folderCounts[c] < MAX_FILES_PER_FOLDER) { sub = c; break; } sfx++;
-        }
-      }
-      folderCounts[sub]++; slugToSubfolder[slug] = sub;
+    if (!hierarchy[countrySlug]) {
+      hierarchy[countrySlug] = { name: meta.name, iso2: meta.iso2 || '', cities: {}, totalEvents: 0 };
     }
+    hierarchy[countrySlug].totalEvents++;
 
-    const completeS2S = {};
-    for (const ev of events) {
-      const slug = slugify(ev.properties.eventname);
-      completeS2S[slug] = folderMapping[slug] || getSubfolder(slug);
+    const cities = hierarchy[countrySlug].cities;
+    if (!cities[citySlug]) {
+      cities[citySlug] = {
+        name: cityName, slug: citySlug, events: [],
+        // City centre from BDC geocoding — more accurate than averaging event lat/lons
+        centreLat: ev.cityLat || null,
+        centreLon: ev.cityLon || null,
+      };
     }
+    cities[citySlug].events.push(ev);
+  }
 
-    // ============================================================
-    // SITEMAP JSON
-    // ============================================================
-    const sitemapEntries = [];
+  // Write all HTML files
+  ensure(OUTPUT_DIR);
 
-    let found = 0, missing = 0;
-    for (const event of limitedEvents) {
-      const slug = slugify(event.properties.eventname);
-      const sub  = slugToSubfolder[slug];
-      ensureDirectoryExists(path.join(OUTPUT_DIR, sub));
-      const name = event.properties.eventname || '';
-      const courseKey = Object.keys(courseMaps).find(k =>
-        k === name || k === name.toLowerCase() || k === slug ||
-        k.replace(/-/g,'').toLowerCase() === name.replace(/\s+/g,'').toLowerCase()
+  const countryList = Object.fromEntries(
+    Object.entries(hierarchy).map(([cs, cd]) => [cs, {
+      name: cd.name, iso2: cd.iso2, totalEvents: cd.totalEvents,
+      cities: Object.values(cd.cities),
+    }])
+  );
+
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'index.html'), generateWorldIndex(countryList), 'utf-8');
+  console.log('Generated: locations/index.html');
+  let pageCount = 1;
+
+  for (const [countrySlug, countryData] of Object.entries(hierarchy)) {
+    const countryDir = path.join(OUTPUT_DIR, countrySlug);
+    ensure(countryDir);
+
+    fs.writeFileSync(
+      path.join(countryDir, 'index.html'),
+      generateCountryPage(countrySlug, { ...countryData, cities: Object.values(countryData.cities) }),
+      'utf-8'
+    );
+    console.log(`Generated: locations/${countrySlug}/`);
+    pageCount++;
+
+    for (const [citySlug, cityData] of Object.entries(countryData.cities)) {
+      if (!cityData.events.length) continue;
+      const cityDir = path.join(countryDir, citySlug);
+      ensure(cityDir);
+      fs.writeFileSync(
+        path.join(cityDir, 'index.html'),
+        generateCityPage(countrySlug, countryData.name, citySlug, cityData),
+        'utf-8'
       );
-      if (courseKey) found++; else missing++;
-      const html = await generateHtml(event, `${sub}/${slug}`, allEventsInfoComplete, completeS2S, courseMaps);
-      fs.writeFileSync(path.join(OUTPUT_DIR, sub, `${slug}.html`), html, 'utf-8');
-      console.log(`Generated: ${sub}/${slug}.html`);
-
-      sitemapEntries.push({
-        name: event.properties.EventLongName || event.properties.eventname,
-        locationPath: buildLocationPath(event),
-      });
+      console.log(`Generated: locations/${countrySlug}/${citySlug}/`);
+      pageCount++;
     }
+  }
 
-    const sitemapPath = path.join(__dirname, '../event-sitemap.json');
-    fs.writeFileSync(sitemapPath, JSON.stringify(sitemapEntries, null, 2), 'utf-8');
-    console.log(`\nSitemap written: ${sitemapPath} (${sitemapEntries.length} entries)`);
+  console.log(`\nDone. ${pageCount} location pages generated in ./locations/`);
 
-    console.log('\nFolder distribution:');
-    Object.entries(folderCounts).forEach(([f,c]) => console.log(`  ${f}: ${c}`));
-    console.log(`\nDone! ${limitedEvents.length} pages. Course: ${found} matched, ${missing} missing.`);
-
-  } catch (err) { console.error('Error:', err); }
+  // Write sitemap
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'sitemap.xml'), generateSitemap(hierarchy), 'utf-8');
+  console.log(`Sitemap: locations/sitemap.xml (${pageCount} URLs)`);
 }
 
-main();
+main().catch(err => { console.error(err); process.exit(1); });
