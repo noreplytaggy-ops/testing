@@ -9,7 +9,7 @@ if (!COURSE_MAPS_URL) {
   throw new Error("COURSE_MAPS_URL secret not set");
 }
 
-const OUTPUT_DIR = path.join(__dirname, '../locations');
+const OUTPUT_DIR = path.join(__dirname, '../explore');
 const MAX_EVENTS = 9999999;
 const MAX_FILES_PER_FOLDER = 999;
 const EVENT_LIMIT = parseInt(process.env.EVENT_LIMIT || '0', 10);
@@ -143,17 +143,7 @@ async function generateHtml(event, relativePath, allEventsInfo, slugToSubfolder,
 <div id="nearby-section" class="iframe-container">
   <h2 class="section-title">Nearby ${isCurrentJunior ? 'Junior Events' : 'Events'}</h2>
   <ul class="nearby-list">
-    ${nearby.map(n => {
-      const locationInfo = slugToSubfolder[n.slug];
-      let href = '#';
-      if (locationInfo && locationInfo.country && locationInfo.city) {
-        href = `${BASE_URL}/${locationInfo.country}/${locationInfo.city}/${n.slug}`;
-      } else if (typeof locationInfo === 'string') {
-        // Fallback for old format
-        href = `${BASE_URL}/${locationInfo}/${n.slug}`;
-      }
-      return `<li class="nearby-item"><a href="${href}" target="_blank">${n.longName}</a> <span class="distance">(${n.dist.toFixed(1)} km)</span></li>`;
-    }).join('')}
+    ${nearby.map(n => `<li class="nearby-item"><a href="${BASE_URL}/${slugToSubfolder[n.slug] || getSubfolder(n.slug)}/${n.slug}" target="_blank">${n.longName}</a> <span class="distance">(${n.dist.toFixed(1)} km)</span></li>`).join('')}
   </ul>
 </div>` : '';
 
@@ -1309,20 +1299,6 @@ async function main() {
     else if (data.events && Array.isArray(data.events.features)) events = data.events.features;
     else throw new Error('Unexpected JSON structure');
 
-    // Load event location mapping from generate-locations
-    console.log('Loading event location mapping...');
-    let eventLocationMap = {};
-    try {
-      const mapPath = path.join(__dirname, '../event-location-map.json');
-      const mapData = fs.readFileSync(mapPath, 'utf-8');
-      eventLocationMap = JSON.parse(mapData);
-      console.log(`Loaded mapping for ${Object.keys(eventLocationMap).length} events`);
-    } catch (e) {
-      console.error('ERROR: event-location-map.json not found!');
-      console.error('Make sure generate-locations.js runs BEFORE generate-events.js');
-      throw e;
-    }
-
     console.log('Fetching course maps...');
     let courseMaps = {};
     try {
@@ -1353,38 +1329,51 @@ async function main() {
     if (EVENT_LIMIT > 0) console.log(`Limit set — generating up to ${EVENT_LIMIT} HTML pages.`);
     console.log(`Processing ${limitedEvents.length} events...`);
 
-    // Use event location map to place files
-    let generated = 0, skipped = 0;
+    const folderCounts = {};
+    ensureDirectoryExists(OUTPUT_DIR);
+    cleanupOldStructure();
+    cleanupRemovedEvents(new Set(limitedEvents.map(e => slugify(e.properties.eventname))));
+
+    const slugToSubfolder = {};
     for (const event of limitedEvents) {
       const slug = slugify(event.properties.eventname);
-      
-      // Get location from mapping
-      if (!eventLocationMap[slug]) {
-        console.warn(`WARNING: ${slug} not found in location map!`);
-        skipped++;
-        continue;
+      let sub = folderMapping[slug] || getSubfolder(slug);
+      if (!folderCounts[sub]) folderCounts[sub] = 0;
+      if (folderCounts[sub] >= MAX_FILES_PER_FOLDER) {
+        let sfx = 2;
+        while (true) {
+          const c = `${sub}${sfx}`; if (!folderCounts[c]) folderCounts[c] = 0;
+          if (folderCounts[c] < MAX_FILES_PER_FOLDER) { sub = c; break; } sfx++;
+        }
       }
+      folderCounts[sub]++; slugToSubfolder[slug] = sub;
+    }
 
-      const { country, city } = eventLocationMap[slug];
-      const eventDir = path.join(OUTPUT_DIR, country, city, slug);
-      
-      ensureDirectoryExists(eventDir);
-      
+    const completeS2S = {};
+    for (const ev of events) {
+      const slug = slugify(ev.properties.eventname);
+      completeS2S[slug] = folderMapping[slug] || getSubfolder(slug);
+    }
+
+    let found = 0, missing = 0;
+    for (const event of limitedEvents) {
+      const slug = slugify(event.properties.eventname);
+      const sub  = slugToSubfolder[slug];
+      ensureDirectoryExists(path.join(OUTPUT_DIR, sub));
       const name = event.properties.eventname || '';
       const courseKey = Object.keys(courseMaps).find(k =>
         k === name || k === name.toLowerCase() || k === slug ||
         k.replace(/-/g,'').toLowerCase() === name.replace(/\s+/g,'').toLowerCase()
       );
-
-      const html = await generateHtml(event, `${country}/${city}/${slug}`, allEventsInfoComplete, eventLocationMap, courseMaps);
-      const filePath = path.join(eventDir, 'index.html');
-      fs.writeFileSync(filePath, html, 'utf-8');
-      
-      console.log(`Generated: ${country}/${city}/${slug}/index.html`);
-      generated++;
+      if (courseKey) found++; else missing++;
+      const html = await generateHtml(event, `${sub}/${slug}`, allEventsInfoComplete, completeS2S, courseMaps);
+      fs.writeFileSync(path.join(OUTPUT_DIR, sub, `${slug}.html`), html, 'utf-8');
+      console.log(`Generated: ${sub}/${slug}.html`);
     }
 
-    console.log(`\nDone! Generated: ${generated}, Skipped: ${skipped}`);
+    console.log('\nFolder distribution:');
+    Object.entries(folderCounts).forEach(([f,c]) => console.log(`  ${f}: ${c}`));
+    console.log(`\nDone! ${limitedEvents.length} pages. Course: ${found} matched, ${missing} missing.`);
 
   } catch (err) { console.error('Error:', err); }
 }
