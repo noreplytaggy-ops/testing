@@ -9,7 +9,7 @@ if (!COURSE_MAPS_URL) {
   throw new Error("COURSE_MAPS_URL secret not set");
 }
 
-const OUTPUT_DIR = path.join(__dirname, '../explore');
+const OUTPUT_DIR = path.join(__dirname, '../locations');
 const EVENT_LIMIT = parseInt(process.env.EVENT_LIMIT || '0', 10);
 
 const COUNTRY_NAMES = {
