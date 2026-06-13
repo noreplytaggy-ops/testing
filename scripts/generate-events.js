@@ -9,7 +9,7 @@ if (!COURSE_MAPS_URL) {
   throw new Error("COURSE_MAPS_URL secret not set");
 }
 
-const OUTPUT_DIR = path.join(__dirname, '../explore');
+const OUTPUT_DIR = path.join(__dirname, '../locations');
 const MAX_EVENTS = 9999999;
 const MAX_FILES_PER_FOLDER = 999;
 const EVENT_LIMIT = parseInt(process.env.EVENT_LIMIT || '0', 10);
@@ -1366,9 +1366,9 @@ async function main() {
       }
 
       const { country, city } = eventLocationMap[slug];
-      const cityDir = path.join(OUTPUT_DIR, country, city);
+      const eventDir = path.join(OUTPUT_DIR, country, city, slug);
       
-      ensureDirectoryExists(cityDir);
+      ensureDirectoryExists(eventDir);
       
       const name = event.properties.eventname || '';
       const courseKey = Object.keys(courseMaps).find(k =>
@@ -1377,10 +1377,10 @@ async function main() {
       );
 
       const html = await generateHtml(event, `${country}/${city}/${slug}`, allEventsInfoComplete, eventLocationMap, courseMaps);
-      const filePath = path.join(cityDir, `${slug}.html`);
+      const filePath = path.join(eventDir, 'index.html');
       fs.writeFileSync(filePath, html, 'utf-8');
       
-      console.log(`Generated: ${country}/${city}/${slug}.html`);
+      console.log(`Generated: ${country}/${city}/${slug}/index.html`);
       generated++;
     }
 
