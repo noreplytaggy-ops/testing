@@ -67,7 +67,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: explore-locations
-          path: ./explore
+          path: ./locations
           retention-days: 1
 
   # ============================================================
@@ -94,11 +94,11 @@ jobs:
           name: event-location-map
           path: .
 
-      - name: Download explore folder structure
+      - name: Download location folder structure
         uses: actions/download-artifact@v4
         with:
           name: explore-locations
-          path: ./explore
+          path: ./locations
 
       - name: Generate HTML pages
         env:
@@ -108,8 +108,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: explore-with-events
-          path: ./explore
+          name: locations-with-events
+          path: ./locations
           retention-days: 1
 
   # ============================================================
@@ -172,12 +172,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download explore with events
+      - name: Download locations with events
         if: needs.generate-html.result == 'success'
         uses: actions/download-artifact@v4
         with:
-          name: explore-with-events
-          path: ./explore
+          name: locations-with-events
+          path: ./locations
 
       - name: Download feature images
         if: needs.generate-images.result == 'success'
@@ -191,7 +191,7 @@ jobs:
          git config user.name  "github-actions[bot]"
          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-         git add ./explore
+         git add ./locations
 
          if git diff --cached --quiet; then
           echo "Nothing to commit."
