@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Find parkruns in Poland — Hotels, Course Maps &amp; Visitor Guides</title>
+<meta name="description" content="Looking for parkrun events in Poland? Browse every town and city, view course maps, find hotels near each event and plan your parkrun trip to Poland." />
+<meta name="author" content="Jake Lofthouse" />
+<meta name="geo.placename" content="Poland" />
+<meta name="geo.position" content="52.20800691743121;18.65403089908258" />
+<meta property="og:title" content="Find parkruns in Poland — Hotels, Course Maps &amp; Visitor Guides" />
+<meta property="og:description" content="Looking for parkrun events in Poland? Browse every town and city, view course maps, find hotels near each event and plan your parkrun trip to Poland." />
+<meta property="og:url" content="https://www.parkrunnertourist.com/locations/poland/" />
+<meta property="og:image" content="https://www.parkrunnertourist.com/Images/Feature.jpg">
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="parkrunner tourist" />
+<meta name="twitter:image" content="https://www.parkrunnertourist.com/Images/Feature.jpg" />
+<meta name="twitter:title" content="Find parkruns in Poland — Hotels, Course Maps &amp; Visitor Guides" />
+<meta name="twitter:description" content="Looking for parkrun events in Poland? Browse every town and city, view course maps, find hotels near each event and plan your parkrun trip to Poland." />
+<meta name="robots" content="index, follow" />
+<link rel="icon" type="image/x-icon" href="https://parkrunnertourist.com/favicon.ico">
+<meta name="language" content="en" />
+<meta name="apple-itunes-app" content="app-id=6743163993, app-argument=https://www.parkrunnertourist.com">
+<link rel="canonical" href="https://www.parkrunnertourist.com/locations/poland/" />
+<link rel="sitemap" type="application/xml" href="https://www.parkrunnertourist.com/locations/sitemap.xml" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"parkrunner tourist","item":"https://www.parkrunnertourist.com"},{"@type":"ListItem","position":2,"name":"Locations","item":"https://www.parkrunnertourist.com/locations/"},{"@type":"ListItem","position":3,"name":"Poland","item":"https://www.parkrunnertourist.com/locations/poland/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Find parkruns in Poland — Hotels, Course Maps & Visitor Guides","description":"Looking for parkrun events in Poland? Browse every town and city, view course maps, find hotels near each event and plan your parkrun trip to Poland.","url":"https://www.parkrunnertourist.com/locations/poland/","spatialCoverage":{"@type":"Place","name":"Poland","geo":{"@type":"GeoCoordinates","latitude":52.20800691743121,"longitude":18.65403089908258}},"publisher":{"@type":"Organization","name":"parkrunner tourist","url":"https://www.parkrunnertourist.com"}}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+<meta name="apple-itunes-app" content="app-id=6743163993, app-argument=https://www.parkrunnertourist.com">
+<link rel="icon" type="image/x-icon" href="https://parkrunnertourist.com/favicon.ico">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-REFFZSK4XK"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-REFFZSK4XK');
+</script>
+</head>
+<body>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0; padding: 0;
+  background: #f6f8f3;
+  line-height: 1.6;
+  color: #1a2318;
+}
+header {
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+  color: white; padding: 1.5rem 2rem; font-weight: 600; font-size: 1.75rem;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 4px 20px rgba(46,125,50,0.3);
+  position: relative; overflow: hidden;
+}
+header::before {
+  content: ''; position: absolute; top:0;left:0;right:0;bottom:0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+  pointer-events: none;
+}
+header a { color:white;text-decoration:none;cursor:pointer;position:relative;z-index:1;transition:transform 0.3s ease; }
+header a:hover { transform: translateY(-2px); }
+.header-map-btn {
+  padding: 0.5rem 1.25rem; background: rgba(255,255,255,0.2);
+  border: 2px solid white; border-radius: 0.5rem; color: white;
+  font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;
+  position: relative; z-index: 1; text-decoration: none; display: inline-block;
+}
+.header-map-btn:hover { background: white; color: #2e7d32; transform: translateY(-2px); }
+/* breadcrumb */
+.breadcrumb {
+  font-size: 0.825rem; color: #64748b; padding: 0.65rem 2rem;
+  background: white; border-bottom: 1px solid #e5eae0;
+  display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;
+}
+.breadcrumb a { color: #4caf50; text-decoration: none; font-weight: 500; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb-sep { opacity: 0.35; }
+/* page hero */
+main { padding: 2.5rem 2rem 5rem; max-width: 1300px; margin: 0 auto; }
+.hero { padding: 2rem 0 1.5rem; border-bottom: 1px solid #dde5d8; margin-bottom: 2rem; }
+.hero-eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #4caf50; margin-bottom: 0.35rem; }
+.hero-title { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 800; color: #1a2318; line-height: 1.15; margin: 0 0 0.5rem; }
+.hero-sub { font-size: 0.975rem; color: #5a6e52; max-width: 600px; line-height: 1.6; margin: 0; }
+/* stat strip */
+.stat-strip {
+  display: flex; margin-bottom: 2rem;
+  background: white; border: 1px solid #dde5d8; border-radius: 0.875rem; overflow: hidden;
+}
+.stat-strip-item {
+  flex: 1; padding: 1rem 1.25rem; display: flex; flex-direction: column;
+  border-right: 1px solid #dde5d8;
+}
+.stat-strip-item:last-child { border-right: none; }
+.stat-strip-value {
+  font-size: 1.5rem; font-weight: 800; color: #2e7d32; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-strip-label { font-size: 0.72rem; color: #7a8f72; margin-top: 0.2rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+/* section headings */
+.section-heading {
+  font-size: 1rem; font-weight: 700; color: #1a2318;
+  margin: 2rem 0 0.875rem; display: flex; align-items: center; gap: 0.5rem;
+}
+.section-heading::after { content: ''; flex: 1; height: 1px; background: #dde5d8; }
+/* country grid */
+.country-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 0.75rem; }
+.country-card {
+  background: white; border: 1px solid #dde5d8; border-radius: 0.75rem;
+  padding: 0.85rem 0.95rem; text-decoration: none; color: inherit;
+  display: flex; align-items: center; gap: 0.65rem;
+  transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s;
+}
+.country-card:hover { box-shadow: 0 3px 14px rgba(46,125,50,0.12); transform: translateY(-2px); border-color: #b2d8b4; }
+.country-card-flag { font-size: 1.65rem; line-height: 1; flex-shrink: 0; }
+.country-card-body { flex: 1; min-width: 0; }
+.country-card h3 { font-weight: 700; font-size: 0.875rem; color: #1a2318; margin: 0 0 0.1rem; }
+.country-card p { font-size: 0.73rem; color: #7a8f72; margin: 0; }
+.country-card-arrow { color: #c8d8c0; font-size: 0.7rem; flex-shrink: 0; }
+/* tiles */
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.625rem; margin-bottom: 2rem; }
+.tile {
+  background: white; border: 1px solid #dde5d8; border-radius: 0.625rem;
+  padding: 0.8rem 0.95rem; display: flex; align-items: center; justify-content: space-between;
+  text-decoration: none; color: inherit;
+  transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s;
+}
+.tile:hover { box-shadow: 0 3px 12px rgba(46,125,50,0.1); transform: translateY(-2px); border-color: #b2d8b4; }
+.tile-name { font-weight: 600; font-size: 0.875rem; color: #1a2318; }
+.tile-count { background: #eef6ee; color: #2e7d32; font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 99px; flex-shrink: 0; margin-left: 0.4rem; }
+/* search */
+.search-wrap { position: relative; margin-bottom: 1.25rem; }
+.search-icon { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem; pointer-events: none; }
+.search-input {
+  width: 100%; padding: 0.65rem 1rem 0.65rem 2.4rem;
+  border: 1.5px solid #dde5d8; border-radius: 0.625rem;
+  font-family: 'Inter', sans-serif; font-size: 0.925rem; background: white; outline: none; color: #1a2318;
+  transition: border 0.18s;
+}
+.search-input:focus { border-color: #4caf50; }
+.search-input::placeholder { color: #aab8a2; }
+/* filter bar (junior / 5k toggle) */
+.filter-bar {
+  display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;
+}
+.filter-label { font-size: 0.8rem; font-weight: 600; color: #7a8f72; margin-right: 0.25rem; }
+.event-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(285px, 1fr)); gap: 1.1rem; }
+.event-card {
+  background: white; border-radius: 0.875rem; overflow: hidden;
+  border: 1px solid #dde5d8;
+  display: flex; flex-direction: column;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+}
+.event-card:hover { box-shadow: 0 5px 20px rgba(46,125,50,0.13); transform: translateY(-3px); border-color: #b2d8b4; }
+.card-map-wrap { height: 180px; position: relative; background: #e8f0e5; flex-shrink: 0; overflow: hidden; }
+.card-map-inner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.card-map-badges { position: absolute; bottom: 7px; left: 7px; z-index: 10; display: flex; gap: 4px; }
+.card-map-badge { border-radius: 6px; padding: 2px 7px; font-size: 10px; font-weight: 700; color: #fff; }
+.card-map-badge.start { background: #28a745; }
+.card-map-badge.finish { background: #dc3545; }
+.card-body { padding: 0.875rem 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+.card-name { font-weight: 700; font-size: 0.95rem; color: #1a2318; line-height: 1.3; }
+.card-location { font-size: 0.775rem; color: #7a8f72; display: flex; align-items: center; gap: 0.3rem; }
+.card-badges { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: auto; padding-top: 0.35rem; }
+.card-badge { font-size: 0.66rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 99px; }
+.card-badge.junior { background: #e0f7fa; color: #006064; }
+.card-cta {
+  display: block; margin: 0.5rem 0.875rem 0.875rem;
+  padding: 0.55rem 1rem; text-align: center;
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  color: white; border-radius: 0.5rem; font-weight: 600; font-size: 0.825rem;
+  text-decoration: none; transition: opacity 0.18s, transform 0.18s;
+}
+.card-cta:hover { opacity: 0.87; transform: translateY(-1px); }
+/* hotel CTA */
+.hotel-cta {
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+  border-radius: 0.875rem; padding: 1.4rem 1.6rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.25rem; margin-bottom: 2rem; flex-wrap: wrap;
+}
+.hotel-cta-text h2 { font-size: 1.15rem; font-weight: 700; color: white; margin: 0 0 0.2rem; }
+.hotel-cta-text p { font-size: 0.85rem; color: rgba(255,255,255,0.73); margin: 0; }
+.hotel-cta-btn {
+  background: white; color: #2e7d32; font-weight: 700; font-size: 0.875rem;
+  padding: 0.6rem 1.4rem; border-radius: 0.5rem; white-space: nowrap;
+  border: none; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s; flex-shrink: 0;
+  font-family: 'Inter', sans-serif;
+}
+.hotel-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.14); }
+/* toggle buttons */
+.toggle-btn {
+  padding: 0.45rem 1.1rem; border-radius: 0.5rem; margin-right: 0.5rem; margin-bottom: 0.25rem;
+  cursor: pointer; font-weight: 600; border: 2px solid #4caf50;
+  transition: all 0.2s; background-color: white; color: #4caf50;
+  font-family: 'Inter', sans-serif; font-size: 0.875rem;
+}
+.toggle-btn:hover:not(.active):not(.filter-btn-disabled) { background-color: #f0faf0; }
+.toggle-btn.active { background: linear-gradient(135deg, #4caf50, #2e7d32); color: white; }
+.toggle-btn.filter-btn-disabled {
+  opacity: 0.38; cursor: not-allowed; border-color: #c8d8c0; color: #aab8a2;
+}
+/* download footer */
+.download-footer {
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
+  color: white; font-weight: 700; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 1px;
+}
+.app-badges { display: flex; gap: 2rem; }
+.download-footer img { height: 70px; width: auto; transition: transform 0.3s ease; cursor: pointer; border-radius: 0.5rem; }
+.download-footer img:hover { transform: scale(1.1) translateY(-4px); }
+footer { text-align: center; padding: 2rem; background: #f6f8f3; color: #64748b; font-weight: 500; }
+.leaflet-control-attribution { display: none !important; }
+@media (max-width: 768px) {
+  main { padding: 1.5rem 1rem 4rem; }
+  .hero-title { font-size: 1.7rem; }
+  header { padding: 1rem; font-size: 1.3rem; }
+  .hotel-cta { flex-direction: column; }
+  .hotel-cta-btn { width: 100%; text-align: center; }
+  .app-badges { flex-direction: column; gap: 1rem; align-items: center; }
+  .stat-strip { flex-wrap: wrap; }
+  .stat-strip-item { border-right: none; border-bottom: 1px solid #dde5d8; flex: 1 1 45%; }
+  .stat-strip-item:last-child { border-bottom: none; }
+}
+</style>
+<header>
+  <a href="https://www.parkrunnertourist.com" target="_self">parkrunner tourist</a>
+  <a href="https://www.parkrunnertourist.com/webapp" target="_blank" class="header-map-btn">Show Full Map</a>
+</header>
+<div class="breadcrumb"><a href="https://www.parkrunnertourist.com/locations/">All Locations</a><span class="breadcrumb-sep">/</span><span>Poland</span></div>
+<main>
+  <div class="hero">
+    <div class="hero-eyebrow">🇵🇱 Poland</div>
+    <h1 class="hero-title">Find parkruns in Poland</h1>
+    <p class="hero-sub">109 parkrun events across 97 towns &amp; cities — pick a location to see course maps and nearby hotels</p>
+  </div>
+  <div class="stat-strip">
+    <div class="stat-strip-item"><span class="stat-strip-value">109</span><span class="stat-strip-label">5k events</span></div>
+    
+    <div class="stat-strip-item"><span class="stat-strip-value">97</span><span class="stat-strip-label">Towns &amp; cities</span></div>
+  </div>
+  <div class="search-wrap"><i class="fas fa-search search-icon"></i><input id="loc-search" class="search-input" type="text" placeholder="Search towns &amp; cities in Poland..." /></div>
+  <div class="section-heading">Towns &amp; Cities</div>
+  <div class="tile-grid">
+<a href="https://www.parkrunnertourist.com/locations/poland/warsaw/" class="tile" data-search="warsaw">
+  <span class="tile-name">Warsaw</span>
+  <span class="tile-count">6</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/gdansk/" class="tile" data-search="gdansk">
+  <span class="tile-name">Gdansk</span>
+  <span class="tile-count">3</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/poznan/" class="tile" data-search="poznan">
+  <span class="tile-name">Poznan</span>
+  <span class="tile-count">3</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/krakow/" class="tile" data-search="krakow">
+  <span class="tile-name">Krakow</span>
+  <span class="tile-count">3</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/lodz/" class="tile" data-search="lodz">
+  <span class="tile-name">Lodz</span>
+  <span class="tile-count">2</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/gdynia/" class="tile" data-search="gdynia">
+  <span class="tile-name">Gdynia</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/wroclaw/" class="tile" data-search="wroclaw">
+  <span class="tile-name">Wroclaw</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/szczecinek/" class="tile" data-search="szczecinek">
+  <span class="tile-name">Szczecinek</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/zary/" class="tile" data-search="zary">
+  <span class="tile-name">Zary</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/osieczna/" class="tile" data-search="osieczna">
+  <span class="tile-name">Osieczna</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/cesky-tesin/" class="tile" data-search="cesky tesin">
+  <span class="tile-name">Cesky Tesin</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/kalisz/" class="tile" data-search="kalisz">
+  <span class="tile-name">Kalisz</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/swinoujscie/" class="tile" data-search="swinoujscie">
+  <span class="tile-name">Swinoujscie</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/pruszkow/" class="tile" data-search="pruszkow">
+  <span class="tile-name">Pruszkow</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/kedzierzyn-kozle/" class="tile" data-search="kedzierzyn-kozle">
+  <span class="tile-name">Kedzierzyn-Kozle</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/bydgoszcz/" class="tile" data-search="bydgoszcz">
+  <span class="tile-name">Bydgoszcz</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/chrzanow/" class="tile" data-search="chrzanow">
+  <span class="tile-name">Chrzanow</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/kolobrzeg/" class="tile" data-search="kolobrzeg">
+  <span class="tile-name">Kolobrzeg</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/rumia/" class="tile" data-search="rumia">
+  <span class="tile-name">Rumia</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/jelenia-gora/" class="tile" data-search="jelenia gora">
+  <span class="tile-name">Jelenia Gora</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/opole/" class="tile" data-search="opole">
+  <span class="tile-name">Opole</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/lubin/" class="tile" data-search="lubin">
+  <span class="tile-name">Lubin</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/skierniewice/" class="tile" data-search="skierniewice">
+  <span class="tile-name">Skierniewice</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/torun/" class="tile" data-search="torun">
+  <span class="tile-name">Torun</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/gostyn/" class="tile" data-search="gostyn">
+  <span class="tile-name">Gostyn</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/szczecin/" class="tile" data-search="szczecin">
+  <span class="tile-name">Szczecin</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/augustow/" class="tile" data-search="augustow">
+  <span class="tile-name">Augustow</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/dobron/" class="tile" data-search="dobron">
+  <span class="tile-name">Dobron</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/tczew/" class="tile" data-search="tczew">
+  <span class="tile-name">Tczew</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/katowice/" class="tile" data-search="katowice">
+  <span class="tile-name">Katowice</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/bialystok/" class="tile" data-search="bialystok">
+  <span class="tile-name">Bialystok</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/jablonna/" class="tile" data-search="jablonna">
+  <span class="tile-name">Jablonna</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/elk/" class="tile" data-search="elk">
+  <span class="tile-name">Elk</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/swidwin/" class="tile" data-search="swidwin">
+  <span class="tile-name">Swidwin</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/rzeszow/" class="tile" data-search="rzeszow">
+  <span class="tile-name">Rzeszow</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/tychy/" class="tile" data-search="tychy">
+  <span class="tile-name">Tychy</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/kutno/" class="tile" data-search="kutno">
+  <span class="tile-name">Kutno</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/grodzisk-mazowiecki/" class="tile" data-search="grodzisk mazowiecki">
+  <span class="tile-name">Grodzisk Mazowiecki</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/dzialdowo/" class="tile" data-search="dzialdowo">
+  <span class="tile-name">Dzialdowo</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/dopiewo/" class="tile" data-search="dopiewo">
+  <span class="tile-name">Dopiewo</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/koscian/" class="tile" data-search="koscian">
+  <span class="tile-name">Koscian</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/glogow/" class="tile" data-search="glogow">
+  <span class="tile-name">Glogow</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/gorzow-wielkopolski/" class="tile" data-search="gorzow wielkopolski">
+  <span class="tile-name">Gorzow Wielkopolski</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/olsztyn/" class="tile" data-search="olsztyn">
+  <span class="tile-name">Olsztyn</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/koszalin/" class="tile" data-search="koszalin">
+  <span class="tile-name">Koszalin</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/skorzec/" class="tile" data-search="skorzec">
+  <span class="tile-name">Skorzec</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/chojnice/" class="tile" data-search="chojnice">
+  <span class="tile-name">Chojnice</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/chelm/" class="tile" data-search="chelm">
+  <span class="tile-name">Chelm</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/zielona-gora/" class="tile" data-search="zielona gora">
+  <span class="tile-name">Zielona Gora</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/grudziadz/" class="tile" data-search="grudziadz">
+  <span class="tile-name">Grudziadz</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/dzierzgon/" class="tile" data-search="dzierzgon">
+  <span class="tile-name">Dzierzgon</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/ketrzyn/" class="tile" data-search="ketrzyn">
+  <span class="tile-name">Ketrzyn</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/kudowa-zdroj/" class="tile" data-search="kudowa-zdroj">
+  <span class="tile-name">Kudowa-Zdroj</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/pila/" class="tile" data-search="pila">
+  <span class="tile-name">Pila</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/swarzedz/" class="tile" data-search="swarzedz">
+  <span class="tile-name">Swarzedz</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/wloclawek/" class="tile" data-search="wloclawek">
+  <span class="tile-name">Wloclawek</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/konin/" class="tile" data-search="konin">
+  <span class="tile-name">Konin</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/czestochowa/" class="tile" data-search="czestochowa">
+  <span class="tile-name">Czestochowa</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/wejherowo/" class="tile" data-search="wejherowo">
+  <span class="tile-name">Wejherowo</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/malbork/" class="tile" data-search="malbork">
+  <span class="tile-name">Malbork</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/lublin/" class="tile" data-search="lublin">
+  <span class="tile-name">Lublin</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/zagorow/" class="tile" data-search="zagorow">
+  <span class="tile-name">Zagorow</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/ilawa/" class="tile" data-search="ilawa">
+  <span class="tile-name">Ilawa</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/radziejowice/" class="tile" data-search="radziejowice">
+  <span class="tile-name">Radziejowice</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/koscierzyna/" class="tile" data-search="koscierzyna">
+  <span class="tile-name">Koscierzyna</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/miedzna/" class="tile" data-search="miedzna">
+  <span class="tile-name">Miedzna</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/elblag/" class="tile" data-search="elblag">
+  <span class="tile-name">Elblag</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/jarocin/" class="tile" data-search="jarocin">
+  <span class="tile-name">Jarocin</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/niepolomice/" class="tile" data-search="niepolomice">
+  <span class="tile-name">Niepolomice</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/mragowo/" class="tile" data-search="mragowo">
+  <span class="tile-name">Mragowo</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/kornik/" class="tile" data-search="kornik">
+  <span class="tile-name">Kornik</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/sosnowiec/" class="tile" data-search="sosnowiec">
+  <span class="tile-name">Sosnowiec</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/gorlitz/" class="tile" data-search="gorlitz">
+  <span class="tile-name">Gorlitz</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/lowicz/" class="tile" data-search="lowicz">
+  <span class="tile-name">Lowicz</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/kety/" class="tile" data-search="kety">
+  <span class="tile-name">Kety</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/krotoszyn/" class="tile" data-search="krotoszyn">
+  <span class="tile-name">Krotoszyn</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/rymanow/" class="tile" data-search="rymanow">
+  <span class="tile-name">Rymanow</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/ostrzeszow/" class="tile" data-search="ostrzeszow">
+  <span class="tile-name">Ostrzeszow</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/wrzesnia/" class="tile" data-search="wrzesnia">
+  <span class="tile-name">Wrzesnia</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/zagan/" class="tile" data-search="zagan">
+  <span class="tile-name">Zagan</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/sandomierz/" class="tile" data-search="sandomierz">
+  <span class="tile-name">Sandomierz</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/brodnica/" class="tile" data-search="brodnica">
+  <span class="tile-name">Brodnica</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/nidzica/" class="tile" data-search="nidzica">
+  <span class="tile-name">Nidzica</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/wiazowna/" class="tile" data-search="wiazowna">
+  <span class="tile-name">Wiazowna</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/jaworzno/" class="tile" data-search="jaworzno">
+  <span class="tile-name">Jaworzno</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/inowroclaw/" class="tile" data-search="inowroclaw">
+  <span class="tile-name">Inowroclaw</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/dzierzoniow/" class="tile" data-search="dzierzoniow">
+  <span class="tile-name">Dzierzoniow</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/radom/" class="tile" data-search="radom">
+  <span class="tile-name">Radom</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/czerwonak/" class="tile" data-search="czerwonak">
+  <span class="tile-name">Czerwonak</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/witnica/" class="tile" data-search="witnica">
+  <span class="tile-name">Witnica</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/pruszcz-gdanski/" class="tile" data-search="pruszcz gdanski">
+  <span class="tile-name">Pruszcz Gdanski</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/osie/" class="tile" data-search="osie">
+  <span class="tile-name">Osie</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/szczytna/" class="tile" data-search="szczytna">
+  <span class="tile-name">Szczytna</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/olesnica/" class="tile" data-search="olesnica">
+  <span class="tile-name">Olesnica</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/olawa/" class="tile" data-search="olawa">
+  <span class="tile-name">Olawa</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/zlocieniec/" class="tile" data-search="zlocieniec">
+  <span class="tile-name">Zlocieniec</span>
+  <span class="tile-count">1</span>
+</a>
+<a href="https://www.parkrunnertourist.com/locations/poland/zywiec/" class="tile" data-search="zywiec">
+  <span class="tile-name">Zywiec</span>
+  <span class="tile-count">1</span>
+</a></div>
+</main>
+<div class="download-footer">
+  Download The App
+  <div class="app-badges">
+    <a href="https://apps.apple.com/gb/app/parkrunner-tourist/id6743163993" target="_blank" rel="noopener noreferrer">
+      <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" />
+    </a>
+    <a href="https://play.google.com/store/apps/details?id=appinventor.ai_jlofty8.parkrunner_tourist" target="_blank" rel="noopener noreferrer">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get it on Google Play" />
+    </a>
+  </div>
+</div>
+<footer>
+  <p style="max-width:900px;margin:0 auto 1rem auto;font-size:0.85rem;line-height:1.5;color:#64748b;">
+    parkrun is a registered trademark of parkrun Limited.
+    This website is independent and is not affiliated with or endorsed by parkrun.
+  </p>
+  &copy; 2026 parkrunner tourist
+</footer>
+<script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js"
+  data-id="jlofthouse" data-description="Support me on Buy me a coffee!"
+  data-message="" data-color="#40DCA5" data-position="Right"
+  data-x_margin="18" data-y_margin="18"></script>
+<script>
+// Count-up animation for .stat-strip-value elements.
+// Triggers when the stat strip scrolls into view. Each digit ticks up
+// independently like an old terminal display, starting slightly offset
+// from each other for a typewriter feel.
+(function() {
+  var strip = document.querySelector('.stat-strip');
+  if (!strip) return;
+
+  var items = strip.querySelectorAll('.stat-strip-value');
+  if (!items.length) return;
+
+  // Store raw numeric targets (strip commas/non-digits)
+  var targets = Array.prototype.map.call(items, function(el) {
+    return parseInt(el.textContent.replace(/[^0-9]/g, ''), 10) || 0;
+  });
+  // Hide the real values; we'll animate to them
+  Array.prototype.forEach.call(items, function(el) { el.textContent = '0'; });
+
+  function animateItem(el, target, delay) {
+    setTimeout(function() {
+      var duration = Math.min(1200, Math.max(400, target * 0.8));
+      var start = null;
+      function tick(ts) {
+        if (!start) start = ts;
+        var progress = Math.min((ts - start) / duration, 1);
+        // Ease out: decelerate toward the end
+        var eased = 1 - Math.pow(1 - progress, 3);
+        var current = Math.round(eased * target);
+        el.textContent = current.toLocaleString();
+        if (progress < 1) requestAnimationFrame(tick);
+        else el.textContent = target.toLocaleString();
+      }
+      requestAnimationFrame(tick);
+    }, delay);
+  }
+
+  function runAnimation() {
+    targets.forEach(function(target, i) {
+      animateItem(items[i], target, i * 120);
+    });
+  }
+
+  if ('IntersectionObserver' in window) {
+    var obs = new IntersectionObserver(function(entries) {
+      if (entries[0].isIntersecting) { runAnimation(); obs.disconnect(); }
+    }, { threshold: 0.3 });
+    obs.observe(strip);
+  } else {
+    runAnimation();
+  }
+})();
+</script>
+<div id="stay22-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;max-width:900px;width:96%;max-height:92vh;
+    overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.4);display:flex;flex-direction:column;">
+    <div style="padding:13px 16px 11px;border-bottom:1px solid rgba(0,0,0,0.08);
+      display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#fff;">
+      <div style="font-size:15px;font-weight:700;color:rgba(0,0,0,0.87)" id="stay22-modal-title">Find Hotels</div>
+      <button onclick="closeStay22()" style="background:rgba(0,0,0,0.07);border:none;border-radius:50%;
+        width:30px;height:30px;cursor:pointer;font-size:14px;display:flex;align-items:center;
+        justify-content:center;color:rgba(0,0,0,0.5);">&times;</button>
+    </div>
+    <div style="padding:10px 16px 6px;border-bottom:1px solid rgba(0,0,0,0.06);flex-shrink:0;background:#fff;">
+      <button class="toggle-btn active" id="btn-listview" onclick="switchStay22View('listview')">List View</button>
+      <button class="toggle-btn" id="btn-map" onclick="switchStay22View('map')">Map View</button>
+    </div>
+    <iframe id="stay22-iframe" style="flex:1;border:none;min-height:500px;"
+      title="Find hotels near parkrun events" src=""></iframe>
+  </div>
+</div>
+<script>
+var _s22Base = '';
+function openStay22(lat, lon, name) {
+  var d = new Date(), day = d.getDay(), diff = (5 - day + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  var checkin = d.toISOString().slice(0, 10);
+  _s22Base = 'https://www.stay22.com/embed/gm?aid=parkrunnertourist'
+    + '&lat=' + lat + '&lng=' + lon + '&maincolor=4caf50'
+    + '&venue=' + encodeURIComponent(name) + '&checkin=' + checkin;
+  document.getElementById('stay22-modal-title').textContent = 'Hotels near ' + name;
+  document.getElementById('btn-listview').classList.add('active');
+  document.getElementById('btn-map').classList.remove('active');
+  document.getElementById('stay22-iframe').src = _s22Base + '&viewmode=listview&listviewexpand=true';
+  var m = document.getElementById('stay22-modal');
+  m.style.display = 'flex';
+}
+function switchStay22View(mode) {
+  document.getElementById('btn-listview').classList.toggle('active', mode === 'listview');
+  document.getElementById('btn-map').classList.toggle('active', mode === 'map');
+  document.getElementById('stay22-iframe').src = _s22Base + '&viewmode=' + mode
+    + (mode === 'listview' ? '&listviewexpand=true' : '');
+}
+function closeStay22() {
+  document.getElementById('stay22-modal').style.display = 'none';
+  document.getElementById('stay22-iframe').src = '';
+  _s22Base = '';
+}
+document.getElementById('stay22-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeStay22();
+});
+</script>
+<script>
+(function() {
+  var inp = document.getElementById('loc-search');
+  if (!inp) return;
+  inp.addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    document.querySelectorAll('.tile').forEach(function(el) {
+      el.style.display = (!q || (el.dataset.search || el.textContent).toLowerCase().includes(q)) ? '' : 'none';
+    });
+  });
+})();
+</script>
+<script>
+(function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var f = params.get('filter') || localStorage.getItem('prt-event-filter') || '5k';
+    document.querySelectorAll('.tile').forEach(function(tile) {
+      try {
+        var href = tile.getAttribute('href');
+        if (!href) return;
+        var u = new URL(href, window.location.href);
+        u.searchParams.set('filter', f);
+        tile.setAttribute('href', u.toString());
+      } catch(e) {}
+    });
+  } catch(e) {}
+})();
+</script>
+</body></html>

@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Find parkruns in Dublin — Hotels Near Each Event &amp; Course Maps</title>
+<meta name="description" content="Planning a visit to Dublin? Find 44 parkrun events in Dublin, Ireland — view course maps, compare hotels nearby and plan your perfect parkrun trip." />
+<meta name="author" content="Jake Lofthouse" />
+<meta name="geo.placename" content="Dublin, Ireland" />
+<meta name="geo.position" content="53.444487;-6.162729" />
+<meta property="og:title" content="Find parkruns in Dublin — Hotels Near Each Event &amp; Course Maps" />
+<meta property="og:description" content="Planning a visit to Dublin? Find 44 parkrun events in Dublin, Ireland — view course maps, compare hotels nearby and plan your perfect parkrun trip." />
+<meta property="og:url" content="https://www.parkrunnertourist.com/locations/ireland/dublin/" />
+<meta property="og:image" content="https://www.parkrunnertourist.com/Images/Feature.jpg">
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="parkrunner tourist" />
+<meta name="twitter:image" content="https://www.parkrunnertourist.com/Images/Feature.jpg" />
+<meta name="twitter:title" content="Find parkruns in Dublin — Hotels Near Each Event &amp; Course Maps" />
+<meta name="twitter:description" content="Planning a visit to Dublin? Find 44 parkrun events in Dublin, Ireland — view course maps, compare hotels nearby and plan your perfect parkrun trip." />
+<meta name="robots" content="index, follow" />
+<link rel="icon" type="image/x-icon" href="https://parkrunnertourist.com/favicon.ico">
+<meta name="language" content="en" />
+<meta name="apple-itunes-app" content="app-id=6743163993, app-argument=https://www.parkrunnertourist.com">
+<link rel="canonical" href="https://www.parkrunnertourist.com/locations/ireland/dublin/" />
+<link rel="sitemap" type="application/xml" href="https://www.parkrunnertourist.com/locations/sitemap.xml" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"parkrunner tourist","item":"https://www.parkrunnertourist.com"},{"@type":"ListItem","position":2,"name":"Locations","item":"https://www.parkrunnertourist.com/locations/"},{"@type":"ListItem","position":3,"name":"Ireland","item":"https://www.parkrunnertourist.com/locations/ireland/"},{"@type":"ListItem","position":4,"name":"Dublin","item":"https://www.parkrunnertourist.com/locations/ireland/dublin/"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Find parkruns in Dublin — Hotels Near Each Event & Course Maps","description":"Planning a visit to Dublin? Find 44 parkrun events in Dublin, Ireland — view course maps, compare hotels nearby and plan your perfect parkrun trip.","url":"https://www.parkrunnertourist.com/locations/ireland/dublin/","spatialCoverage":{"@type":"Place","name":"Dublin, Ireland","geo":{"@type":"GeoCoordinates","latitude":53.444487,"longitude":-6.162729}},"publisher":{"@type":"Organization","name":"parkrunner tourist","url":"https://www.parkrunnertourist.com"}}</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+<meta name="apple-itunes-app" content="app-id=6743163993, app-argument=https://www.parkrunnertourist.com">
+<link rel="icon" type="image/x-icon" href="https://parkrunnertourist.com/favicon.ico">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-REFFZSK4XK"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-REFFZSK4XK');
+</script>
+</head>
+<body>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0; padding: 0;
+  background: #f6f8f3;
+  line-height: 1.6;
+  color: #1a2318;
+}
+header {
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+  color: white; padding: 1.5rem 2rem; font-weight: 600; font-size: 1.75rem;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 4px 20px rgba(46,125,50,0.3);
+  position: relative; overflow: hidden;
+}
+header::before {
+  content: ''; position: absolute; top:0;left:0;right:0;bottom:0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+  pointer-events: none;
+}
+header a { color:white;text-decoration:none;cursor:pointer;position:relative;z-index:1;transition:transform 0.3s ease; }
+header a:hover { transform: translateY(-2px); }
+.header-map-btn {
+  padding: 0.5rem 1.25rem; background: rgba(255,255,255,0.2);
+  border: 2px solid white; border-radius: 0.5rem; color: white;
+  font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;
+  position: relative; z-index: 1; text-decoration: none; display: inline-block;
+}
+.header-map-btn:hover { background: white; color: #2e7d32; transform: translateY(-2px); }
+/* breadcrumb */
+.breadcrumb {
+  font-size: 0.825rem; color: #64748b; padding: 0.65rem 2rem;
+  background: white; border-bottom: 1px solid #e5eae0;
+  display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;
+}
+.breadcrumb a { color: #4caf50; text-decoration: none; font-weight: 500; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb-sep { opacity: 0.35; }
+/* page hero */
+main { padding: 2.5rem 2rem 5rem; max-width: 1300px; margin: 0 auto; }
+.hero { padding: 2rem 0 1.5rem; border-bottom: 1px solid #dde5d8; margin-bottom: 2rem; }
+.hero-eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #4caf50; margin-bottom: 0.35rem; }
+.hero-title { font-size: clamp(1.75rem, 4vw, 2.75rem); font-weight: 800; color: #1a2318; line-height: 1.15; margin: 0 0 0.5rem; }
+.hero-sub { font-size: 0.975rem; color: #5a6e52; max-width: 600px; line-height: 1.6; margin: 0; }
+/* stat strip */
+.stat-strip {
+  display: flex; margin-bottom: 2rem;
+  background: white; border: 1px solid #dde5d8; border-radius: 0.875rem; overflow: hidden;
+}
+.stat-strip-item {
+  flex: 1; padding: 1rem 1.25rem; display: flex; flex-direction: column;
+  border-right: 1px solid #dde5d8;
+}
+.stat-strip-item:last-child { border-right: none; }
+.stat-strip-value {
+  font-size: 1.5rem; font-weight: 800; color: #2e7d32; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-strip-label { font-size: 0.72rem; color: #7a8f72; margin-top: 0.2rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+/* section headings */
+.section-heading {
+  font-size: 1rem; font-weight: 700; color: #1a2318;
+  margin: 2rem 0 0.875rem; display: flex; align-items: center; gap: 0.5rem;
+}
+.section-heading::after { content: ''; flex: 1; height: 1px; background: #dde5d8; }
+/* country grid */
+.country-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 0.75rem; }
+.country-card {
+  background: white; border: 1px solid #dde5d8; border-radius: 0.75rem;
+  padding: 0.85rem 0.95rem; text-decoration: none; color: inherit;
+  display: flex; align-items: center; gap: 0.65rem;
+  transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s;
+}
+.country-card:hover { box-shadow: 0 3px 14px rgba(46,125,50,0.12); transform: translateY(-2px); border-color: #b2d8b4; }
+.country-card-flag { font-size: 1.65rem; line-height: 1; flex-shrink: 0; }
+.country-card-body { flex: 1; min-width: 0; }
+.country-card h3 { font-weight: 700; font-size: 0.875rem; color: #1a2318; margin: 0 0 0.1rem; }
+.country-card p { font-size: 0.73rem; color: #7a8f72; margin: 0; }
+.country-card-arrow { color: #c8d8c0; font-size: 0.7rem; flex-shrink: 0; }
+/* tiles */
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.625rem; margin-bottom: 2rem; }
+.tile {
+  background: white; border: 1px solid #dde5d8; border-radius: 0.625rem;
+  padding: 0.8rem 0.95rem; display: flex; align-items: center; justify-content: space-between;
+  text-decoration: none; color: inherit;
+  transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s;
+}
+.tile:hover { box-shadow: 0 3px 12px rgba(46,125,50,0.1); transform: translateY(-2px); border-color: #b2d8b4; }
+.tile-name { font-weight: 600; font-size: 0.875rem; color: #1a2318; }
+.tile-count { background: #eef6ee; color: #2e7d32; font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 99px; flex-shrink: 0; margin-left: 0.4rem; }
+/* search */
+.search-wrap { position: relative; margin-bottom: 1.25rem; }
+.search-icon { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.85rem; pointer-events: none; }
+.search-input {
+  width: 100%; padding: 0.65rem 1rem 0.65rem 2.4rem;
+  border: 1.5px solid #dde5d8; border-radius: 0.625rem;
+  font-family: 'Inter', sans-serif; font-size: 0.925rem; background: white; outline: none; color: #1a2318;
+  transition: border 0.18s;
+}
+.search-input:focus { border-color: #4caf50; }
+.search-input::placeholder { color: #aab8a2; }
+/* filter bar (junior / 5k toggle) */
+.filter-bar {
+  display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;
+}
+.filter-label { font-size: 0.8rem; font-weight: 600; color: #7a8f72; margin-right: 0.25rem; }
+.event-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(285px, 1fr)); gap: 1.1rem; }
+.event-card {
+  background: white; border-radius: 0.875rem; overflow: hidden;
+  border: 1px solid #dde5d8;
+  display: flex; flex-direction: column;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+}
+.event-card:hover { box-shadow: 0 5px 20px rgba(46,125,50,0.13); transform: translateY(-3px); border-color: #b2d8b4; }
+.card-map-wrap { height: 180px; position: relative; background: #e8f0e5; flex-shrink: 0; overflow: hidden; }
+.card-map-inner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.card-map-badges { position: absolute; bottom: 7px; left: 7px; z-index: 10; display: flex; gap: 4px; }
+.card-map-badge { border-radius: 6px; padding: 2px 7px; font-size: 10px; font-weight: 700; color: #fff; }
+.card-map-badge.start { background: #28a745; }
+.card-map-badge.finish { background: #dc3545; }
+.card-body { padding: 0.875rem 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+.card-name { font-weight: 700; font-size: 0.95rem; color: #1a2318; line-height: 1.3; }
+.card-location { font-size: 0.775rem; color: #7a8f72; display: flex; align-items: center; gap: 0.3rem; }
+.card-badges { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: auto; padding-top: 0.35rem; }
+.card-badge { font-size: 0.66rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 99px; }
+.card-badge.junior { background: #e0f7fa; color: #006064; }
+.card-cta {
+  display: block; margin: 0.5rem 0.875rem 0.875rem;
+  padding: 0.55rem 1rem; text-align: center;
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  color: white; border-radius: 0.5rem; font-weight: 600; font-size: 0.825rem;
+  text-decoration: none; transition: opacity 0.18s, transform 0.18s;
+}
+.card-cta:hover { opacity: 0.87; transform: translateY(-1px); }
+/* hotel CTA */
+.hotel-cta {
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+  border-radius: 0.875rem; padding: 1.4rem 1.6rem;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1.25rem; margin-bottom: 2rem; flex-wrap: wrap;
+}
+.hotel-cta-text h2 { font-size: 1.15rem; font-weight: 700; color: white; margin: 0 0 0.2rem; }
+.hotel-cta-text p { font-size: 0.85rem; color: rgba(255,255,255,0.73); margin: 0; }
+.hotel-cta-btn {
+  background: white; color: #2e7d32; font-weight: 700; font-size: 0.875rem;
+  padding: 0.6rem 1.4rem; border-radius: 0.5rem; white-space: nowrap;
+  border: none; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s; flex-shrink: 0;
+  font-family: 'Inter', sans-serif;
+}
+.hotel-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.14); }
+/* toggle buttons */
+.toggle-btn {
+  padding: 0.45rem 1.1rem; border-radius: 0.5rem; margin-right: 0.5rem; margin-bottom: 0.25rem;
+  cursor: pointer; font-weight: 600; border: 2px solid #4caf50;
+  transition: all 0.2s; background-color: white; color: #4caf50;
+  font-family: 'Inter', sans-serif; font-size: 0.875rem;
+}
+.toggle-btn:hover:not(.active):not(.filter-btn-disabled) { background-color: #f0faf0; }
+.toggle-btn.active { background: linear-gradient(135deg, #4caf50, #2e7d32); color: white; }
+.toggle-btn.filter-btn-disabled {
+  opacity: 0.38; cursor: not-allowed; border-color: #c8d8c0; color: #aab8a2;
+}
+/* download footer */
+.download-footer {
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
+  color: white; font-weight: 700; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 1px;
+}
+.app-badges { display: flex; gap: 2rem; }
+.download-footer img { height: 70px; width: auto; transition: transform 0.3s ease; cursor: pointer; border-radius: 0.5rem; }
+.download-footer img:hover { transform: scale(1.1) translateY(-4px); }
+footer { text-align: center; padding: 2rem; background: #f6f8f3; color: #64748b; font-weight: 500; }
+.leaflet-control-attribution { display: none !important; }
+@media (max-width: 768px) {
+  main { padding: 1.5rem 1rem 4rem; }
+  .hero-title { font-size: 1.7rem; }
+  header { padding: 1rem; font-size: 1.3rem; }
+  .hotel-cta { flex-direction: column; }
+  .hotel-cta-btn { width: 100%; text-align: center; }
+  .app-badges { flex-direction: column; gap: 1rem; align-items: center; }
+  .stat-strip { flex-wrap: wrap; }
+  .stat-strip-item { border-right: none; border-bottom: 1px solid #dde5d8; flex: 1 1 45%; }
+  .stat-strip-item:last-child { border-bottom: none; }
+}
+</style>
+<header>
+  <a href="https://www.parkrunnertourist.com" target="_self">parkrunner tourist</a>
+  <a href="https://www.parkrunnertourist.com/webapp" target="_blank" class="header-map-btn">Show Full Map</a>
+</header>
+<div class="breadcrumb"><a href="https://www.parkrunnertourist.com/locations/">All Locations</a><span class="breadcrumb-sep">/</span><a href="https://www.parkrunnertourist.com/locations/ireland/">Ireland</a><span class="breadcrumb-sep">/</span><span>Dublin</span></div>
+<main>
+  <div class="hero">
+    <div class="hero-eyebrow">Ireland</div>
+    <h1 class="hero-title">Find parkruns in Dublin</h1>
+    <p class="hero-sub">44 parkrun events in Dublin — view course maps and find hotels nearby</p>
+  </div>
+  <div class="stat-strip">
+    <div class="stat-strip-item"><span class="stat-strip-value">25</span><span class="stat-strip-label">5k events</span></div>
+    <div class="stat-strip-item"><span class="stat-strip-value">19</span><span class="stat-strip-label">Junior events</span></div>
+  </div>
+  <div class="hotel-cta">
+    <div class="hotel-cta-text">
+      <h2>Staying in Dublin?</h2>
+      <p>Find hotels and rentals near your parkrun event.</p>
+    </div>
+    <button class="hotel-cta-btn" onclick="openStay22(53.444487,-6.162729,'Dublin parkrun')">Find Hotels</button>
+  </div>
+  <div class="search-wrap"><i class="fas fa-search search-icon"></i><input id="evt-search" class="search-input" type="text" placeholder="Search events in Dublin..." /></div>
+  <div class="filter-bar" id="event-filter-bar">
+  <span class="filter-label">Show:</span>
+  <button class="toggle-btn" id="filter-5k"
+    onclick="setFilter('5k')" title="">5k Events</button>
+  <button class="toggle-btn" id="filter-junior"
+    onclick="setFilter('junior')" title="">Junior Events</button>
+  <button class="toggle-btn" id="filter-all" onclick="setFilter('all')">All Events</button>
+</div>
+<script>
+(function() {
+  var GLOBAL_KEY = 'prt-event-filter';
+  var HAS_JUNIOR   = true;
+  var HAS_STANDARD = true;
+
+  // Read filter from URL param first, then localStorage, then default to 5k
+  function getInitialFilter() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var fromUrl = params.get('filter');
+      if (fromUrl && ['5k','junior','all'].indexOf(fromUrl) !== -1) {
+        // Validate: if the page doesn't have that type, fall back
+        if (fromUrl === '5k' && !HAS_STANDARD) fromUrl = HAS_JUNIOR ? 'junior' : 'all';
+        if (fromUrl === 'junior' && !HAS_JUNIOR) fromUrl = HAS_STANDARD ? '5k' : 'all';
+        localStorage.setItem(GLOBAL_KEY, fromUrl);
+        return fromUrl;
+      }
+    } catch(e) {}
+    try {
+      var saved = localStorage.getItem(GLOBAL_KEY) || '5k';
+      // Validate saved value against what this page has
+      if (saved === '5k' && !HAS_STANDARD) saved = HAS_JUNIOR ? 'junior' : 'all';
+      if (saved === 'junior' && !HAS_JUNIOR) saved = HAS_STANDARD ? '5k' : 'all';
+      return saved;
+    } catch(e) { return '5k'; }
+  }
+
+  function applyFilter(val) {
+    try { localStorage.setItem(GLOBAL_KEY, val); } catch(e) {}
+
+    // Update URL param without adding history entries
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set('filter', val);
+      history.replaceState(null, '', url.toString());
+    } catch(e) {}
+
+    // Update button states
+    var btn5k     = document.getElementById('filter-5k');
+    var btnJunior = document.getElementById('filter-junior');
+    var btnAll    = document.getElementById('filter-all');
+    if (btn5k)     btn5k.classList.toggle('active', val === '5k');
+    if (btnJunior) btnJunior.classList.toggle('active', val === 'junior');
+    if (btnAll)    btnAll.classList.toggle('active', val === 'all');
+
+    // Show/hide event cards
+    document.querySelectorAll('.event-card').forEach(function(card) {
+      var isJunior = card.dataset.junior === 'true';
+      var show = val === 'all'
+        || (val === '5k' && !isJunior)
+        || (val === 'junior' && isJunior);
+      card.style.display = show ? '' : 'none';
+    });
+
+    // Append ?filter=VAL to all tile (city/region) links on this page
+    // so clicking through carries the preference forward
+    document.querySelectorAll('.tile').forEach(function(tile) {
+      try {
+        var href = tile.getAttribute('href');
+        if (!href) return;
+        var u = new URL(href, window.location.href);
+        u.searchParams.set('filter', val);
+        tile.setAttribute('href', u.toString());
+      } catch(e) {}
+    });
+  }
+
+  window.setFilter = applyFilter;
+
+  // Wait for DOM to be ready so event cards exist before we filter them
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { applyFilter(getInitialFilter()); });
+  } else {
+    applyFilter(getInitialFilter());
+  }
+})();
+</script>
+  <div class="section-heading">Events in Dublin</div>
+  <div class="event-grid"><div class="event-card" data-search="albert college junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-albertcollegejuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Albert College junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/A/albertcollege-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-albertcollegejuniors');
+  if (!el) return;
+  var map = L.map('cmap-albertcollegejuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.38333, -6.261935], 14);
+  L.circleMarker([53.38333, -6.261935], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="ardgillan parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-ardgillan" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Ardgillan parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/A/ardgillan" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-ardgillan');
+  if (!el) return;
+  var map = L.map('cmap-ardgillan', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.586088, -6.161152], 14);
+  L.circleMarker([53.586088, -6.161152], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="balbriggan junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-balbrigganjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Balbriggan junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/B/balbriggan-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-balbrigganjuniors');
+  if (!el) return;
+  var map = L.map('cmap-balbrigganjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.616099, -6.187225], 14);
+  L.circleMarker([53.616099, -6.187225], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="beechpark junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-beechparkjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Beechpark junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/B/beechpark-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-beechparkjuniors');
+  if (!el) return;
+  var map = L.map('cmap-beechparkjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.381645, -6.424837], 14);
+  L.circleMarker([53.381645, -6.424837], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="belcamp junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-belcampjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Belcamp junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/B/belcamp-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-belcampjuniors');
+  if (!el) return;
+  var map = L.map('cmap-belcampjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.406138, -6.212029], 14);
+  L.circleMarker([53.406138, -6.212029], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="brickfields parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-brickfields" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Brickfields parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/B/brickfields" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-brickfields');
+  if (!el) return;
+  var map = L.map('cmap-brickfields', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.331707, -6.310669], 14);
+  L.circleMarker([53.331707, -6.310669], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="broadmeadow linear parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-broadmeadowlinear" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Broadmeadow Linear parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/B/broadmeadowlinear" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-broadmeadowlinear');
+  if (!el) return;
+  var map = L.map('cmap-broadmeadowlinear', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.474318, -6.232618], 14);
+  L.circleMarker([53.474318, -6.232618], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="bushy parkrun, dublin dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-bushydublin" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Bushy parkrun, Dublin</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/B/bushydublin" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-bushydublin');
+  if (!el) return;
+  var map = L.map('cmap-bushydublin', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.298951, -6.296455], 14);
+  L.circleMarker([53.298951, -6.296455], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="cabinteely junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-cabinteelyjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Cabinteely junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/C/cabinteely-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-cabinteelyjuniors');
+  if (!el) return;
+  var map = L.map('cmap-cabinteelyjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.26062, -6.158163], 14);
+  L.circleMarker([53.26062, -6.158163], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="cabinteely parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-cabinteely" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Cabinteely parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/C/cabinteely" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-cabinteely');
+  if (!el) return;
+  var map = L.map('cmap-cabinteely', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.26137, -6.158811], 14);
+  L.circleMarker([53.26137, -6.158811], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="cherry orchard junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-cherryorchardjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Cherry Orchard junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/C/cherryorchard-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-cherryorchardjuniors');
+  if (!el) return;
+  var map = L.map('cmap-cherryorchardjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.337009, -6.377058], 14);
+  L.circleMarker([53.337009, -6.377058], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="corkagh parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-corkagh" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Corkagh parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/C/corkagh" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-corkagh');
+  if (!el) return;
+  var map = L.map('cmap-corkagh', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.315227, -6.410276], 14);
+  L.circleMarker([53.315227, -6.410276], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="darndale parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-darndale" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Darndale parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/D/darndale" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-darndale');
+  if (!el) return;
+  var map = L.map('cmap-darndale', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.402785, -6.18863], 14);
+  L.circleMarker([53.402785, -6.18863], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="deerpark junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-deerparkjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Deerpark junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/D/deerpark-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-deerparkjuniors');
+  if (!el) return;
+  var map = L.map('cmap-deerparkjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.293443, -6.218187], 14);
+  L.circleMarker([53.293443, -6.218187], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="dodder valley parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-doddervalley" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Dodder Valley parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/D/doddervalley" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-doddervalley');
+  if (!el) return;
+  var map = L.map('cmap-doddervalley', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.27877, -6.35667], 14);
+  L.circleMarker([53.27877, -6.35667], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="donabate parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-donabate" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Donabate parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/D/donabate" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-donabate');
+  if (!el) return;
+  var map = L.map('cmap-donabate', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.486227, -6.167897], 14);
+  L.circleMarker([53.486227, -6.167897], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="fairview parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-fairview" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Fairview parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/F/fairview" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-fairview');
+  if (!el) return;
+  var map = L.map('cmap-fairview', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.363864, -6.228896], 14);
+  L.circleMarker([53.363864, -6.228896], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="father collins parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-fathercollins" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Father Collins parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/F/fathercollins" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-fathercollins');
+  if (!el) return;
+  var map = L.map('cmap-fathercollins', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.405158, -6.16021], 14);
+  L.circleMarker([53.405158, -6.16021], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="griffeen junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-griffeenjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Griffeen junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/G/griffeen-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-griffeenjuniors');
+  if (!el) return;
+  var map = L.map('cmap-griffeenjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.343795, -6.44471], 14);
+  L.circleMarker([53.343795, -6.44471], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="griffeen parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-griffeen" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Griffeen parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/G/griffeen" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-griffeen');
+  if (!el) return;
+  var map = L.map('cmap-griffeen', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.343685, -6.445112], 14);
+  L.circleMarker([53.343685, -6.445112], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="hartstown parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-hartstown" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Hartstown parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/H/hartstown" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-hartstown');
+  if (!el) return;
+  var map = L.map('cmap-hartstown', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.395076, -6.415828], 14);
+  L.circleMarker([53.395076, -6.415828], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="iveagh sports ground junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-iveaghsportsgroundjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Iveagh Sports Ground junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/I/iveaghsportsground-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-iveaghsportsgroundjuniors');
+  if (!el) return;
+  var map = L.map('cmap-iveaghsportsgroundjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.329094, -6.305765], 14);
+  L.circleMarker([53.329094, -6.305765], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="lusk sports hub junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-lusksportshubjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Lusk Sports Hub junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/L/lusksportshub-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-lusksportshubjuniors');
+  if (!el) return;
+  var map = L.map('cmap-lusksportshubjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.530771, -6.161849], 14);
+  L.circleMarker([53.530771, -6.161849], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="malahide castle junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-malahidecastlejuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Malahide Castle junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/M/malahidecastle-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-malahidecastlejuniors');
+  if (!el) return;
+  var map = L.map('cmap-malahidecastlejuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.448561, -6.159048], 14);
+  L.circleMarker([53.448561, -6.159048], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="malahide parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-malahide" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Malahide parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/M/malahide" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-malahide');
+  if (!el) return;
+  var map = L.map('cmap-malahide', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.444487, -6.162729], 14);
+  L.circleMarker([53.444487, -6.162729], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="marlay junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-marlayjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Marlay junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/M/marlay-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-marlayjuniors');
+  if (!el) return;
+  var map = L.map('cmap-marlayjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.275009, -6.27174], 14);
+  L.circleMarker([53.275009, -6.27174], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="marlay parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-marlay" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Marlay parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/M/marlay" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-marlay');
+  if (!el) return;
+  var map = L.map('cmap-marlay', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.27689, -6.271777], 14);
+  L.circleMarker([53.27689, -6.271777], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="mellowes park junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-mellowesparkjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Mellowes Park junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/M/mellowespark-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-mellowesparkjuniors');
+  if (!el) return;
+  var map = L.map('cmap-mellowesparkjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.391669, -6.305834], 14);
+  L.circleMarker([53.391669, -6.305834], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="newbridge house junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-newbridgehousejuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Newbridge House junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/N/newbridgehouse-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-newbridgehousejuniors');
+  if (!el) return;
+  var map = L.map('cmap-newbridgehousejuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.486144, -6.168358], 14);
+  L.circleMarker([53.486144, -6.168358], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="poolbeg parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-poolbeg" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Poolbeg parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/P/poolbeg" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-poolbeg');
+  if (!el) return;
+  var map = L.map('cmap-poolbeg', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.337026, -6.210301], 14);
+  L.circleMarker([53.337026, -6.210301], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="poppintree parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-poppintree" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Poppintree parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/P/poppintree" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-poppintree');
+  if (!el) return;
+  var map = L.map('cmap-poppintree', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.398403, -6.286613], 14);
+  L.circleMarker([53.398403, -6.286613], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="porterstown parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-porterstown" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Porterstown parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/P/porterstown" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-porterstown');
+  if (!el) return;
+  var map = L.map('cmap-porterstown', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.370116, -6.402238], 14);
+  L.circleMarker([53.370116, -6.402238], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="ringsend junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-ringsendjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Ringsend junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/R/ringsend-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-ringsendjuniors');
+  if (!el) return;
+  var map = L.map('cmap-ringsendjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.340373, -6.221004], 14);
+  L.circleMarker([53.340373, -6.221004], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="river valley junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-rivervalleyjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">River Valley junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/R/rivervalley-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-rivervalleyjuniors');
+  if (!el) return;
+  var map = L.map('cmap-rivervalleyjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.455791, -6.237769], 14);
+  L.circleMarker([53.455791, -6.237769], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="river valley parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-rivervalley" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">River Valley parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/R/rivervalley" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-rivervalley');
+  if (!el) return;
+  var map = L.map('cmap-rivervalley', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.454443, -6.243532], 14);
+  L.circleMarker([53.454443, -6.243532], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="rockfield junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-rockfieldjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Rockfield junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/R/rockfield-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-rockfieldjuniors');
+  if (!el) return;
+  var map = L.map('cmap-rockfieldjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.381883, -6.221602], 14);
+  L.circleMarker([53.381883, -6.221602], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="rush junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-rushjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Rush junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/R/rush-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-rushjuniors');
+  if (!el) return;
+  var map = L.map('cmap-rushjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.523269, -6.099962], 14);
+  L.circleMarker([53.523269, -6.099962], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="shanganagh parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-shanganagh" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Shanganagh parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/S/shanganagh" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-shanganagh');
+  if (!el) return;
+  var map = L.map('cmap-shanganagh', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.227908, -6.114882], 14);
+  L.circleMarker([53.227908, -6.114882], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="sport ireland campus parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-sportirelandcampus" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Sport Ireland Campus parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/S/sportirelandcampus" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-sportirelandcampus');
+  if (!el) return;
+  var map = L.map('cmap-sportirelandcampus', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.392563, -6.357092], 14);
+  L.circleMarker([53.392563, -6.357092], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="st anne’s junior parkrun dublin" data-junior="true">
+  <div class="card-map-wrap">
+    <div id="cmap-stannesjuniors" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">St Anne’s junior parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"><span class="card-badge junior">Junior parkrun</span></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/S/stannes-juniors" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-stannesjuniors');
+  if (!el) return;
+  var map = L.map('cmap-stannesjuniors', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.370968, -6.172071], 14);
+  L.circleMarker([53.370968, -6.172071], { radius: 8, fillColor: '#40e0d0', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="st anne’s parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-stannes" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">St Anne’s parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/S/stannes" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-stannes');
+  if (!el) return;
+  var map = L.map('cmap-stannes', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.371179, -6.174574], 14);
+  L.circleMarker([53.371179, -6.174574], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="tolka valley parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-tolkavalley" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Tolka Valley parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/T/tolkavalley" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-tolkavalley');
+  if (!el) return;
+  var map = L.map('cmap-tolkavalley', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.378396, -6.297293], 14);
+  L.circleMarker([53.378396, -6.297293], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="tymon parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-tymon" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Tymon parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/T/tymon" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-tymon');
+  if (!el) return;
+  var map = L.map('cmap-tymon', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.295314, -6.3282], 14);
+  L.circleMarker([53.295314, -6.3282], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script>
+<div class="event-card" data-search="waterstown parkrun dublin" data-junior="false">
+  <div class="card-map-wrap">
+    <div id="cmap-waterstown" class="card-map-inner"></div>
+    
+  </div>
+  <div class="card-body">
+    <div class="card-name">Waterstown parkrun</div>
+    <span class="card-location"><i class="fas fa-map-marker-alt"></i> Dublin</span>
+    <div class="card-badges"></div>
+  </div>
+  <a href="https://www.parkrunnertourist.com/explore/W/waterstown" class="card-cta" target="_blank">View Guide &amp; Hotels</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function _d(b,s){const f=JSON.parse(atob(b));const r=[];let v=s>>>0;for(let i=0;i<f.length;i+=2){v=(Math.imul(v,1664525)+1013904223)>>>0;const lng=(f[i]^(v&0xFFFFFF))/1e6;v=(Math.imul(v,1664525)+1013904223)>>>0;const lat=(f[i+1]^(v&0xFFFFFF))/1e6;r.push([lng,lat]);}return r;}
+  var el = document.getElementById('cmap-waterstown');
+  if (!el) return;
+  var map = L.map('cmap-waterstown', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, touchZoom: false, attributionControl: false
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+  
+  map.setView([53.358719, -6.370558], 14);
+  L.circleMarker([53.358719, -6.370558], { radius: 8, fillColor: '#4caf50', color: '#fff', weight: 2.5, fillOpacity: 1 }).addTo(map);
+  
+})();</script></div>
+</main>
+<div class="download-footer">
+  Download The App
+  <div class="app-badges">
+    <a href="https://apps.apple.com/gb/app/parkrunner-tourist/id6743163993" target="_blank" rel="noopener noreferrer">
+      <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" />
+    </a>
+    <a href="https://play.google.com/store/apps/details?id=appinventor.ai_jlofty8.parkrunner_tourist" target="_blank" rel="noopener noreferrer">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get it on Google Play" />
+    </a>
+  </div>
+</div>
+<footer>
+  <p style="max-width:900px;margin:0 auto 1rem auto;font-size:0.85rem;line-height:1.5;color:#64748b;">
+    parkrun is a registered trademark of parkrun Limited.
+    This website is independent and is not affiliated with or endorsed by parkrun.
+  </p>
+  &copy; 2026 parkrunner tourist
+</footer>
+<script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js"
+  data-id="jlofthouse" data-description="Support me on Buy me a coffee!"
+  data-message="" data-color="#40DCA5" data-position="Right"
+  data-x_margin="18" data-y_margin="18"></script>
+<script>
+// Count-up animation for .stat-strip-value elements.
+// Triggers when the stat strip scrolls into view. Each digit ticks up
+// independently like an old terminal display, starting slightly offset
+// from each other for a typewriter feel.
+(function() {
+  var strip = document.querySelector('.stat-strip');
+  if (!strip) return;
+
+  var items = strip.querySelectorAll('.stat-strip-value');
+  if (!items.length) return;
+
+  // Store raw numeric targets (strip commas/non-digits)
+  var targets = Array.prototype.map.call(items, function(el) {
+    return parseInt(el.textContent.replace(/[^0-9]/g, ''), 10) || 0;
+  });
+  // Hide the real values; we'll animate to them
+  Array.prototype.forEach.call(items, function(el) { el.textContent = '0'; });
+
+  function animateItem(el, target, delay) {
+    setTimeout(function() {
+      var duration = Math.min(1200, Math.max(400, target * 0.8));
+      var start = null;
+      function tick(ts) {
+        if (!start) start = ts;
+        var progress = Math.min((ts - start) / duration, 1);
+        // Ease out: decelerate toward the end
+        var eased = 1 - Math.pow(1 - progress, 3);
+        var current = Math.round(eased * target);
+        el.textContent = current.toLocaleString();
+        if (progress < 1) requestAnimationFrame(tick);
+        else el.textContent = target.toLocaleString();
+      }
+      requestAnimationFrame(tick);
+    }, delay);
+  }
+
+  function runAnimation() {
+    targets.forEach(function(target, i) {
+      animateItem(items[i], target, i * 120);
+    });
+  }
+
+  if ('IntersectionObserver' in window) {
+    var obs = new IntersectionObserver(function(entries) {
+      if (entries[0].isIntersecting) { runAnimation(); obs.disconnect(); }
+    }, { threshold: 0.3 });
+    obs.observe(strip);
+  } else {
+    runAnimation();
+  }
+})();
+</script>
+<div id="stay22-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  z-index:9999;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;max-width:900px;width:96%;max-height:92vh;
+    overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.4);display:flex;flex-direction:column;">
+    <div style="padding:13px 16px 11px;border-bottom:1px solid rgba(0,0,0,0.08);
+      display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:#fff;">
+      <div style="font-size:15px;font-weight:700;color:rgba(0,0,0,0.87)" id="stay22-modal-title">Find Hotels</div>
+      <button onclick="closeStay22()" style="background:rgba(0,0,0,0.07);border:none;border-radius:50%;
+        width:30px;height:30px;cursor:pointer;font-size:14px;display:flex;align-items:center;
+        justify-content:center;color:rgba(0,0,0,0.5);">&times;</button>
+    </div>
+    <div style="padding:10px 16px 6px;border-bottom:1px solid rgba(0,0,0,0.06);flex-shrink:0;background:#fff;">
+      <button class="toggle-btn active" id="btn-listview" onclick="switchStay22View('listview')">List View</button>
+      <button class="toggle-btn" id="btn-map" onclick="switchStay22View('map')">Map View</button>
+    </div>
+    <iframe id="stay22-iframe" style="flex:1;border:none;min-height:500px;"
+      title="Find hotels near parkrun events" src=""></iframe>
+  </div>
+</div>
+<script>
+var _s22Base = '';
+function openStay22(lat, lon, name) {
+  var d = new Date(), day = d.getDay(), diff = (5 - day + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  var checkin = d.toISOString().slice(0, 10);
+  _s22Base = 'https://www.stay22.com/embed/gm?aid=parkrunnertourist'
+    + '&lat=' + lat + '&lng=' + lon + '&maincolor=4caf50'
+    + '&venue=' + encodeURIComponent(name) + '&checkin=' + checkin;
+  document.getElementById('stay22-modal-title').textContent = 'Hotels near ' + name;
+  document.getElementById('btn-listview').classList.add('active');
+  document.getElementById('btn-map').classList.remove('active');
+  document.getElementById('stay22-iframe').src = _s22Base + '&viewmode=listview&listviewexpand=true';
+  var m = document.getElementById('stay22-modal');
+  m.style.display = 'flex';
+}
+function switchStay22View(mode) {
+  document.getElementById('btn-listview').classList.toggle('active', mode === 'listview');
+  document.getElementById('btn-map').classList.toggle('active', mode === 'map');
+  document.getElementById('stay22-iframe').src = _s22Base + '&viewmode=' + mode
+    + (mode === 'listview' ? '&listviewexpand=true' : '');
+}
+function closeStay22() {
+  document.getElementById('stay22-modal').style.display = 'none';
+  document.getElementById('stay22-iframe').src = '';
+  _s22Base = '';
+}
+document.getElementById('stay22-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeStay22();
+});
+</script>
+<script>
+(function() {
+  var inp = document.getElementById('evt-search');
+  if (!inp) return;
+  inp.addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    document.querySelectorAll('.event-card').forEach(function(el) {
+      el.style.display = (!q || (el.dataset.search || el.textContent).toLowerCase().includes(q)) ? '' : 'none';
+    });
+  });
+})();
+</script>
+</body></html>
