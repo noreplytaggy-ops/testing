@@ -1244,13 +1244,6 @@ function generateEventLocations(enriched, hierarchy) {
 
     locationMap[ev.eventName] = {
       path:        `/${countrySlug}/${citySlug}`,
-      country:     meta.name,
-      countrySlug,
-      city:        cityName,
-      citySlug,
-      lat:         ev.lat || null,
-      lon:         ev.lon || null,
-      isJunior:    ev.isJunior || false,
     };
   }
 
