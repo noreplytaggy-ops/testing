@@ -1227,6 +1227,43 @@ ${entries}
 }
 
 // ---------------------------------------------------------------------------
+// Event locations map
+// Writes /locations/event-locations.json — a lookup from event name to its
+// location path on the site, e.g.:
+//   { "sheffield": "/united-kingdom/sheffield", ... }
+// Useful as a sitemap/index for individual event pages.
+// ---------------------------------------------------------------------------
+function generateEventLocations(enriched, hierarchy) {
+  const locationMap = {};
+
+  for (const ev of enriched) {
+    const meta        = COUNTRY_META[ev.countryCode] || { name: 'Unknown', iso2: '' };
+    const countrySlug = slugify(meta.name);
+    const cityName    = ev.city || meta.name;
+    const citySlug    = slugify(cityName);
+
+    locationMap[ev.eventName] = {
+      path:        `/${countrySlug}/${citySlug}`,
+      country:     meta.name,
+      countrySlug,
+      city:        cityName,
+      citySlug,
+      lat:         ev.lat || null,
+      lon:         ev.lon || null,
+      isJunior:    ev.isJunior || false,
+    };
+  }
+
+  // Sort alphabetically by event name for a stable, diffable output
+  const sorted = Object.keys(locationMap).sort().reduce((acc, key) => {
+    acc[key] = locationMap[key];
+    return acc;
+  }, {});
+
+  return JSON.stringify(sorted, null, 2);
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
@@ -1356,6 +1393,11 @@ async function main() {
   // Write sitemap
   fs.writeFileSync(path.join(OUTPUT_DIR, 'sitemap.xml'), generateSitemap(hierarchy), 'utf-8');
   console.log(`Sitemap: locations/sitemap.xml (${pageCount} URLs)`);
+
+  // Write event locations index
+  const eventLocationsJson = generateEventLocations(enriched, hierarchy);
+  fs.writeFileSync(path.join(OUTPUT_DIR, 'event-locations.json'), eventLocationsJson, 'utf-8');
+  console.log(`Event locations: locations/event-locations.json (${enriched.length} events)`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
