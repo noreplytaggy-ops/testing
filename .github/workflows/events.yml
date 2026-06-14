@@ -153,6 +153,7 @@ jobs:
     needs: [generate-html, generate-images, generate-locations]
     if: |
       always() &&
+      !contains(needs.*.result, 'failure') &&
       (needs.generate-html.result == 'success' ||
        needs.generate-images.result == 'success' ||
        needs.generate-locations.result == 'success')
@@ -166,6 +167,7 @@ jobs:
         with:
           name: html-pages
           path: ./explore
+        continue-on-error: true
 
       - name: Download feature images
         if: needs.generate-images.result == 'success'
@@ -173,6 +175,7 @@ jobs:
         with:
           name: feature-images
           path: ./explore/images
+        continue-on-error: true
 
       - name: Download location pages
         if: needs.generate-locations.result == 'success'
@@ -180,6 +183,7 @@ jobs:
         with:
           name: location-pages
           path: ./locations
+        continue-on-error: true
 
       - name: Download geo cache
         if: needs.generate-locations.result == 'success'
